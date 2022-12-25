@@ -1,9 +1,40 @@
 print("Thanks for using Sora Engine! v0.1")
 
 import pygame
+import time
 
 
 class SoraContext:
+        
+    # ------------------------------ #
+    # time + time + time
+    ENGINE_UPTIME = 0
+    ENGINE_START_TIME = 0
+
+    START_TIME = 0
+    END_TIME = 0
+    DELTA = 0
+
+    @classmethod
+    def start_engine_time(cls):
+        """Starts engine time."""
+        cls.ENGINE_START_TIME = time.time()
+        cls.START_TIME = cls.ENGINE_START_TIME
+        cls.update_time()
+
+    @classmethod
+    def update_time(cls):
+        """Updates time."""
+        cls.END_TIME = time.time()
+        cls.DELTA = cls.END_TIME - cls.START_TIME
+        cls.START_TIME = cls.END_TIME
+        cls.ENGINE_UPTIME += cls.DELTA
+    
+    @classmethod
+    def pause_time(cls, t: float):
+        """Pauses time for a certain amount of time."""
+        time.sleep(t)
+
     # ------------------------------ #
     # window variables
 
@@ -17,6 +48,8 @@ class SoraContext:
     FSIZE = [1280, 720]
     FBITS = 32
 
+    MODERNGL = False
+
     # setup engine
     @classmethod
     def initialize(cls, options: dict):
@@ -29,6 +62,9 @@ class SoraContext:
         cls.FSIZE = options["framebuffer_size"]
         cls.FBITS = options["framebuffer_bits"]
         # add options as required!
+        cls.MODERNGL = cls.is_flag_active(pygame.OPENGL)
+        if cls.MODERNGL:
+            from . import mgl
         return cls
 
     # check if certain flags are active
@@ -55,8 +91,14 @@ class SoraContext:
     @classmethod
     def push_framebuffer(cls):
         """Pushes framebuffer to window."""
-        # render frame buffer texture to window!
-        pygame.display.flip()
+        if cls.MODERNGL:
+            # push frame buffer to moderngl window context
+            mgl.ModernGL.render(mgl.Texture.pg2gltex(cls.FRAMEBUFFER, "fb"))
+            pygame.display.flip()
+        else:
+            # render frame buffer texture to window!
+            cls.WINDOW.blit(pygame.transform.scale(cls.FRAMEBUFFER, cls.WSIZE))
+            pygame.display.update()
 
     @classmethod
     def update_window_resize(cls, event):
@@ -80,7 +122,7 @@ class SoraContext:
         """Update mouse position."""
         cls.MOUSE_MOVE[0], cls.MOUSE_MOVE[1] = event.rel
         cls.MOUSE_POS[0], cls.MOUSE_POS[1] = event.pos
-    
+
     @classmethod
     def update_mouse_press(cls, event):
         """Update mouse button press."""
@@ -250,4 +292,3 @@ class SoraContext:
             return cls.FONTS[fs]
         cls.FONTS[fs] = pygame.font.Font(path, size)
         return cls.FONTS[fs]
-    

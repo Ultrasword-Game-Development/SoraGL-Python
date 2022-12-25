@@ -29,41 +29,68 @@ ModernGL.create_context(options={"standalone": False, "gc_mode": "context_gc", "
 
 shader = mgl.ShaderProgram("assets/shaders/default.glsl")
 
-verts = [0.0, 0.5, -0.5, -0.5, 0.5, -0.5]
-verts_buf = struct.pack('6f', *verts)
-ind_buf = struct.pack('6i', *[0, 1, 2, 
-                                2, 1, 3])
-vbo = ModernGL.CTX.buffer(verts_buf)
-ibo = ModernGL.CTX.buffer(ind_buf)
-vao = ModernGL.CTX.vertex_array(shader.program, [(vbo, '2f', 'vvert')], ibo)
+vertices = mgl.Buffer('16f', [-0.5, -0.5, 0, 0,
+                             0.5, -0.5, 0.0, 1.0,
+                             0.5, 0.5, 1.0, 1.0,
+                              -0.5, 0.5, 0.0, 1.0])
+indices = mgl.Buffer('6i', [0, 1, 2, 3, 0, 2])
+vattrib = mgl.VAO()
+vattrib.add_attribute('2f', 'vvert')
+vattrib.add_attribute('2f', 'vuv')
+# add attribs?
+vattrib.create_structure(vertices, indices)
+
+
+# verts = [-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5]
+# verts_buf = struct.pack('8f', *verts)
+# ind_buf = struct.pack('6i', *[0, 1, 2, 
+#                                 3, 0, 2])
+# vbo = ModernGL.CTX.buffer(verts_buf)
+# ibo = ModernGL.CTX.buffer(ind_buf)
+# vao = ModernGL.CTX.vertex_array(shader.program, [(vbo, '2f', 'vvert')], ibo)
 
 """
 TODO:
 1. ipmlement uniform uploading --> textures, times, uniform values  basically
 2. let me  push frame buffer to gl screen context!
 3. start rendering to frambuffer /implement new game engine system! -- OUTLINE ON DOC FIRST
-4. etc
+4. cleaning up buffers --> releasing all gl context data
+
+ERRORS:
+1. resizing window increases RAM usage -- maybe opengl error? gc?
 """
+
 
 
 # ------------------------------ #
 # game loop
+SORA.start_engine_time()
 while SORA.RUNNING:
     SORA.FRAMEBUFFER.fill((255, 255, 255, 255))
-    # update + render
+    # pygame update + render
+
+
+    # moderngl render
     ModernGL.update_context()
     ModernGL.CTX.clear(ModernGL.CLEARCOLOR[0], ModernGL.CLEARCOLOR[1], ModernGL.CLEARCOLOR[2], ModernGL.CLEARCOLOR[3])
     ModernGL.CTX.enable(mgl.moderngl.BLEND)
-    vao.render(mode=mgl.moderngl.TRIANGLES)
+    vattrib.change_uniform("utime", SORA.ENGINE_UPTIME % 10000)
+    vattrib.change_uniform("framebuffer", mgl.Texture.pg2gltex(SORA.FRAMEBUFFER, "fb"))
+    # print(vattrib.uniforms)
+
+    # vao.render(mode=mgl.moderngl.TRIANGLES)
+    vattrib.render()
     ModernGL.CTX.disable(mgl.moderngl.BLEND)
     
     # push frame
-    SORA.push_framebuffer()
+    # SORA.push_framebuffer()
+    pygame.display.flip()
     # update events
     SORA.update_hardware()
     SORA.handle_pygame_events()
     # clock tick
     SORA.CLOCK.tick(SORA.FPS)
+    SORA.update_time()
 
 pygame.quit()
 

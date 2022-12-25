@@ -248,7 +248,6 @@ class VAO:
         blob = []
         vattrib = ' '.join([i[0] for i in self.attributes])
         blob.append(tuple([self.glvbo, vattrib] + list(i[1] for i in self.attributes)))
-        print(blob)
         self.vao = ModernGL.CTX.vertex_array(ShaderProgram.SHADERS[self.shader].program, 
                             blob,
                             self.glibo)

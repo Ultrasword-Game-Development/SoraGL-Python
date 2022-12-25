@@ -4,13 +4,10 @@ import struct
 
 # ------------------------------ #
 # setup
-
-
-
 SORA = engine.SoraContext.initialize({"fps": 30, "window_size": [1280, 720], 
             "window_flags": pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF, 
             "window_bits": 32, "framebuffer_flags": pygame.SRCALPHA, 
-            "framebuffer_size": [1280, 720], "framebuffer_bits": 32})
+            "framebuffer_size": [1280//3, 720//3], "framebuffer_bits": 32})
 
 SORA.create_context()
 
@@ -29,10 +26,10 @@ ModernGL.create_context(options={"standalone": False, "gc_mode": "context_gc", "
 
 shader = mgl.ShaderProgram("assets/shaders/default.glsl")
 
-vertices = mgl.Buffer('16f', [-0.5, -0.5, 0, 0,
-                             0.5, -0.5, 0.0, 1.0,
-                             0.5, 0.5, 1.0, 1.0,
-                              -0.5, 0.5, 0.0, 1.0])
+vertices = mgl.Buffer('16f', [-1.0, -1.0, 0.0, 1.0,
+                             1.0, -1.0, 1.0, 1.0,
+                             1.0, 1.0, 1.0, 0.0,
+                              -1.0, 1.0, 0.0, 0.0])
 indices = mgl.Buffer('6i', [0, 1, 2, 3, 0, 2])
 vattrib = mgl.VAO()
 vattrib.add_attribute('2f', 'vvert')
@@ -60,7 +57,7 @@ ERRORS:
 1. resizing window increases RAM usage -- maybe opengl error? gc?
 """
 
-
+image = SORA.load_image("assets/sprites/tomato.png")
 
 # ------------------------------ #
 # game loop
@@ -68,7 +65,8 @@ SORA.start_engine_time()
 while SORA.RUNNING:
     SORA.FRAMEBUFFER.fill((255, 255, 255, 255))
     # pygame update + render
-
+    pygame.draw.rect(SORA.FRAMEBUFFER, (255, 0, 0), pygame.Rect(0, 0, 100, 100))
+    SORA.FRAMEBUFFER.blit(image, (100, 100))
 
     # moderngl render
     ModernGL.update_context()

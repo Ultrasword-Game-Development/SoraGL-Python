@@ -142,7 +142,7 @@ class SoraContext:
     
     # ------------------------------ #
     # hardware data -- input [keyboard]
-    KEYBOARD_KEYS = [False] * 512
+    KEYBOARD_KEYS = {}
     KEYBOARD_PRESSED = set()
     
     @classmethod

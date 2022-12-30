@@ -29,6 +29,8 @@ class SoraContext:
         cls.DELTA = cls.END_TIME - cls.START_TIME
         cls.START_TIME = cls.END_TIME
         cls.ENGINE_UPTIME += cls.DELTA
+        # update all clocks
+        cls.update_global_clocks()
     
     @classmethod
     def pause_time(cls, t: float):
@@ -49,12 +51,20 @@ class SoraContext:
     @classmethod
     def deactivate_timer(cls, timer):
         """Deactivate a timer"""
-        REMOVE_ARR.add(timer.hash)
+        cls.REMOVE_ARR.add(timer.hash)
     
     @classmethod
     def activate_timer(cls, timer):
         """Activate a timer"""
-        ACTIVE_CLOCKS.add(timer.hash)
+        cls.ACTIVE_CLOCKS.add(timer.hash)
+    
+    @classmethod
+    def get_timer(cls, limit: float=0, loop:bool=False):
+        """Get a timer object"""
+        c = SoraContext.Timer(limit, loop)
+        cls.ALL_CLOCKS[c.hash] = c
+        cls.activate_timer(c)
+        return c
     
     @classmethod
     def update_global_clocks(cls):
@@ -63,12 +73,13 @@ class SoraContext:
             cls.ALL_CLOCKS[c].update()
         for c in cls.REMOVE_ARR:
             cls.ACTIVE_CLOCKS.remove(c)
+        cls.REMOVE_ARR.clear()
 
     # ------------------------------ #
     # timer class
 
     class Timer:
-        def __init__(self, limit:float=0, loop: bool = False):
+        def __init__(self, limit:float, loop:bool):
             self.hash = hash(self)
             self.initial = SoraContext.get_current_time()
             self.passed = 0
@@ -80,10 +91,19 @@ class SoraContext:
             """Updates the clock - throws a signal when finished"""
             self.passed += SoraContext.DELTA
             # to implement sending signals -- when completed!
-            if not self.loop and self.passed < self.limit:
-                SoraContext.deactivate_timer(hash(self))
+            # print(self.passed)
+            if self.passed > self.limit:
+                # -- emit a signal
                 self.passed = 0
                 self.loopcount += 1
+                if not self.loop:
+                    SoraContext.deactivate_timer(self)
+        
+        def reset_timer(self, time:float=0):
+            """Reset the timer"""
+            self.initial = SoraContext.get_current_time()
+            self.passed = 0
+            self.loopcount = 0
 
     # ------------------------------ #
     # window variables

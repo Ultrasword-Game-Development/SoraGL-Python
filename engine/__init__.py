@@ -35,13 +35,63 @@ class SoraContext:
         """Pauses time for a certain amount of time."""
         time.sleep(t)
 
+    @classmethod
+    def get_current_time(cls):
+        """Returns the current system time"""
+        return cls.START_TIME
+    
+    # ------------------------------ #
+    # global clock queue
+    ALL_CLOCKS = {}
+    ACTIVE_CLOCKS = set()
+    REMOVE_ARR = set()
+
+    @classmethod
+    def deactivate_timer(cls, timer):
+        """Deactivate a timer"""
+        REMOVE_ARR.add(timer.hash)
+    
+    @classmethod
+    def activate_timer(cls, timer):
+        """Activate a timer"""
+        ACTIVE_CLOCKS.add(timer.hash)
+    
+    @classmethod
+    def update_global_clocks(cls):
+        """Update all active clocks"""
+        for c in cls.ACTIVE_CLOCKS:
+            cls.ALL_CLOCKS[c].update()
+        for c in cls.REMOVE_ARR:
+            cls.ACTIVE_CLOCKS.remove(c)
+
+    # ------------------------------ #
+    # timer class
+
+    class Timer:
+        def __init__(self, limit:float=0, loop: bool = False):
+            self.hash = hash(self)
+            self.initial = SoraContext.get_current_time()
+            self.passed = 0
+            self.loopcount = 0
+            self.limit = limit
+            self.loop = loop
+
+        def update(self):
+            """Updates the clock - throws a signal when finished"""
+            self.passed += SoraContext.DELTA
+            # to implement sending signals -- when completed!
+            if not self.loop and self.passed < self.limit:
+                SoraContext.deactivate_timer(hash(self))
+                self.passed = 0
+                self.loopcount += 1
+
     # ------------------------------ #
     # window variables
 
     FPS = 30
     WSIZE = [1280, 720]
     WPREVSIZE = [1280, 720]
-    WFLAGS = pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF
+    WFLAGS = pygame.RESIZABLE | pygame.DOUBLEBUF
     WBITS = 32
     FFLAGS = pygame.SRCALPHA
     FPREVSIZE = [1280, 720]
@@ -97,7 +147,7 @@ class SoraContext:
             pygame.display.flip()
         else:
             # render frame buffer texture to window!
-            cls.WINDOW.blit(pygame.transform.scale(cls.FRAMEBUFFER, cls.WSIZE))
+            cls.WINDOW.blit(pygame.transform.scale(cls.FRAMEBUFFER, cls.WSIZE), (0,0))
             pygame.display.update()
 
     @classmethod
@@ -106,7 +156,7 @@ class SoraContext:
         cls.WPREVSIZE[0], cls.WPREVSIZE[1] = cls.WSIZE[0], cls.WSIZE[1]
         cls.WSIZE[0], cls.WSIZE[1] = event.x, event.y
 
-    # TODO - changing fb res 
+    # TODO - changing fb res
     
     # ------------------------------ #
     # hardware data -- input [mouse]

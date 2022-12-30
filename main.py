@@ -18,7 +18,7 @@ if SORA.is_flag_active(pygame.OPENGL):
     from engine import mgl
     from engine.mgl import ModernGL
 
-# from engine import mgl
+
 # ------------------------------ #
 # post setup
 
@@ -36,15 +36,6 @@ vattrib.add_attribute('2f', 'vvert')
 vattrib.add_attribute('2f', 'vuv')
 # add attribs?
 vattrib.create_structure(vertices, indices)
-
-
-# verts = [-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5]
-# verts_buf = struct.pack('8f', *verts)
-# ind_buf = struct.pack('6i', *[0, 1, 2, 
-#                                 3, 0, 2])
-# vbo = ModernGL.CTX.buffer(verts_buf)
-# ibo = ModernGL.CTX.buffer(ind_buf)
-# vao = ModernGL.CTX.vertex_array(shader.program, [(vbo, '2f', 'vvert')], ibo)
 
 
 """
@@ -72,7 +63,6 @@ while SORA.RUNNING:
     ModernGL.CTX.enable(mgl.moderngl.BLEND)
     vattrib.change_uniform("utime", SORA.ENGINE_UPTIME % 10000)
     vattrib.change_uniform("framebuffer", mgl.Texture.pg2gltex(SORA.FRAMEBUFFER, "fb"))
-    # print(vattrib.uniforms)
 
     # vao.render(mode=mgl.moderngl.TRIANGLES)
     vattrib.render()

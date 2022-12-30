@@ -1,6 +1,6 @@
 ###
 #vertex
-#version 330
+#version 300 es
 
 in vec2 vvert;
 in vec2 vuv;
@@ -17,7 +17,7 @@ void main() {
 
 ###
 #fragment
-#version 330
+#version 300 es
 
 in vec2 fuv;
 

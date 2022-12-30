@@ -1,41 +1,74 @@
+import pygame
+import engine
 import struct
-import moderngl
 
-ctx = moderngl.create_context(standalone=True)
+# ------------------------------ #
+# setup
+SORA = engine.SoraContext.initialize({"fps": 30, "window_size": [1280, 720], 
+            "window_flags": pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF, 
+            "window_bits": 32, "framebuffer_flags": pygame.SRCALPHA, 
+            "framebuffer_size": [1280//3, 720//3], "framebuffer_bits": 32})
 
-program = ctx.program(
-    vertex_shader="""
-    #version 330
+SORA.create_context()
 
-    // Output values for the shader. They end up in the buffer.
-    out float value;
-    out float product;
+# ------------------------------ #
+# import gl?
+if SORA.is_flag_active(pygame.OPENGL):
+    print('loaded')
+    from engine import mgl
+    from engine.mgl import ModernGL
 
-    void main() {
-        // Implicit type conversion from int to float will happen here
-        value = gl_VertexID;
-        product = gl_VertexID * gl_VertexID;
-    }
-    """,
-    # What out varyings to capture in our buffer!
-    varyings=["value", "product"],
-)
+# from engine import mgl
+# ------------------------------ #
+# post setup
 
-NUM_VERTICES = 10
+ModernGL.create_context(options={"standalone": False, "gc_mode": "context_gc", "clear_color": [0.0, 0.0, 0.0, 1.0]})
 
-# We always need a vertex array in order to execute a shader program.
-# Our shader doesn't have any buffer inputs, so we give it an empty array.
-vao = ctx.vertex_array(program, [])
+shader = mgl.ShaderProgram("assets/shaders/testing.glsl")
 
-# Create a buffer allocating room for 20 32 bit floats
-buffer = ctx.buffer(reserve=NUM_VERTICES * 8)
+vertices = mgl.Buffer('16f', [-1.0, -1.0, 0.0, 1.0,
+                            1.0, -1.0, 1.0, 1.0,
+                            1.0, 1.0, 1.0, 0.0,
+                            -1.0, 1.0, 0.0, 0.0])
+indices = mgl.Buffer('6i', [0, 1, 2, 3, 0, 2])
+vattrib = mgl.VAO("assets/shaders/testing.glsl")
+vattrib.add_attribute('2f', 'vvert')
+vattrib.add_attribute('2f', 'vuv')
+# add attribs?
+vattrib.create_structure(vertices, indices)
 
-# Start a transform with buffer as the destination.
-# We force the vertex shader to run 10 times
-vao.transform(buffer, vertices=NUM_VERTICES)
+vattrib.change_uniform("ures", SORA.WSIZE)
 
-# Unpack the 20 float values from the buffer (copy from graphics memory to system memory).
-# Reading from the buffer will cause a sync (the python program stalls until the shader is done)
-data = struct.unpack("20f", buffer.read())
-for i in range(0, 20, 2):
-    print("value = {}, product = {}".format(*data[i:i+2]))
+# ------------------------------ #
+# game loop
+SORA.start_engine_time()
+while SORA.RUNNING:
+    SORA.FRAMEBUFFER.fill((255, 255, 255, 255))
+    # pygame update + render
+    # print(SORA.get_mouse_abs()[0] / SORA.WSIZE[0], SORA.get_mouse_abs()[1] / SORA.WSIZE[1])
+
+    # moderngl render
+    ModernGL.update_context()
+    ModernGL.CTX.clear(ModernGL.CLEARCOLOR[0], ModernGL.CLEARCOLOR[1], ModernGL.CLEARCOLOR[2], ModernGL.CLEARCOLOR[3])
+    ModernGL.CTX.enable(mgl.moderngl.BLEND)
+    vattrib.change_uniform("utime", SORA.ENGINE_UPTIME % 10000)
+    vattrib.change_uniform("umpos", (SORA.get_mouse_abs()[0] / SORA.WSIZE[0]*2-1, -SORA.get_mouse_abs()[1] / SORA.WSIZE[1]*2+1))
+    # vattrib.change_uniform("framebuffer", mgl.Texture.pg2gltex(SORA.FRAMEBUFFER, "fb"))
+    # print(vattrib.uniforms)
+
+    # vao.render(mode=mgl.moderngl.TRIANGLES)
+    vattrib.render()
+    ModernGL.CTX.disable(mgl.moderngl.BLEND)
+    
+    # push frame
+    # SORA.push_framebuffer()
+    pygame.display.flip()
+    # update events
+    SORA.update_hardware()
+    SORA.handle_pygame_events()
+    # clock tick
+    SORA.CLOCK.tick(SORA.FPS)
+    SORA.update_time()
+
+pygame.quit()
+

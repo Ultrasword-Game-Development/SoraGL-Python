@@ -154,6 +154,7 @@ class ShaderProgram:
         sections = [ShaderStep(shadersnippet) for shadersnippet in data.split(ShaderProgram.PIPELINE_SPLIT)[1:]]
         sections.sort(key=lambda x: x.shadertype)
         # create program
+        print(self.path)
         self.program = ModernGL.CTX.program(vertex_shader=sections[0].shader, fragment_shader=sections[1].shader)
     
     def update_uniforms(self, s: str, uniforms: dict):

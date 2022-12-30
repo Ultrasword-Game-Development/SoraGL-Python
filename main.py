@@ -27,9 +27,9 @@ ModernGL.create_context(options={"standalone": False, "gc_mode": "context_gc", "
 shader = mgl.ShaderProgram("assets/shaders/default.glsl")
 
 vertices = mgl.Buffer('16f', [-1.0, -1.0, 0.0, 1.0,
-                             1.0, -1.0, 1.0, 1.0,
-                             1.0, 1.0, 1.0, 0.0,
-                              -1.0, 1.0, 0.0, 0.0])
+                            1.0, -1.0, 1.0, 1.0,
+                            1.0, 1.0, 1.0, 0.0,
+                            -1.0, 1.0, 0.0, 0.0])
 indices = mgl.Buffer('6i', [0, 1, 2, 3, 0, 2])
 vattrib = mgl.VAO()
 vattrib.add_attribute('2f', 'vvert')
@@ -46,11 +46,9 @@ vattrib.create_structure(vertices, indices)
 # ibo = ModernGL.CTX.buffer(ind_buf)
 # vao = ModernGL.CTX.vertex_array(shader.program, [(vbo, '2f', 'vvert')], ibo)
 
+
 """
 TODO:
-1. ipmlement uniform uploading --> textures, times, uniform values  basically
-2. let me  push frame buffer to gl screen context!
-3. start rendering to frambuffer /implement new game engine system! -- OUTLINE ON DOC FIRST
 4. cleaning up buffers --> releasing all gl context data
 
 ERRORS:

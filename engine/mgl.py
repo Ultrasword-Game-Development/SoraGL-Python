@@ -21,8 +21,8 @@ class ModernGL:
     def create_context(cls, options: dict):
         """Creates moderngl context."""
         cls.CTX = moderngl.create_context(options['standalone'])
-        cls.CTX.gc_mode = options['gc_mode']
-        cls.CLEARCOLOR = options['clear_color']
+        cls.CTX.gc_mode = options['gc_mode'] if 'gc_mode' in options else None
+        cls.CLEARCOLOR = options['clear_color'] if 'clear_color' in options else ModernGL.CLEARCOLOR
         # create the quad buffer for FB
         cls.FB_BUFFER = cls.CTX.buffer(data = array('f', [
             -1.0, -1.0, 0.0, 0.0,

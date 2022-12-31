@@ -46,7 +46,7 @@ class SpriteSheet:
     DEFAULT_FRAME_LENGTH = 1/10
 
     def __init__(self, image: pygame.Surface, width: int, height: int, spacex: int, spacey: int):
-        self.image = image
+        self.image = image # filled with FrameData objects
         self.width = width
         self.height = height
         self.spacex = spacex
@@ -77,6 +77,7 @@ class SpriteSheet:
 
     def __getitem__(self, index: int):
         """Get a frame at a specified index"""
+        print(self.frames)
         return self.frames[index].get_frame()
     
     def get_frame_data(self, index: int):
@@ -97,7 +98,7 @@ class SequenceRegistry:
         self.parent = parent
         self.findex = 0
         self.f = 0
-        self.fdata = parent.get_frame(self.f)
+        self.fdata = parent.get_frame_data(self.f)
         self.timer = engine.SoraContext.get_timer(limit=self.fdata.duration, loop=True)
 
     def update(self):
@@ -105,7 +106,7 @@ class SequenceRegistry:
         if self.timer.loopcount:
             self.f += 1
             self.f %= len(self.parent)
-            self.fdata = self.parent.get_frame(self.f)
+            self.fdata = self.parent.get_frame_data(self.f)
             self.timer.reset_timer(self.fdata.duration)
     
     def get_frame(self):
@@ -126,6 +127,10 @@ class Sequence:
         self.duration = sum([f.duration for f in frames])
         self._metadata = metadata
 
+    def get_frame_data(self, index: int):
+        """Get a frame at a specified index"""
+        return self.sprite_sheet.get_frame_data(index)
+    
     def get_frame(self, index: int):
         """Get a frame at a specified index"""
         return self.sprite_sheet[index]

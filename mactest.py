@@ -17,7 +17,7 @@ SORA.create_context()
 
 
 animation.Category.load_category("assets/sprites/tomato.json")
-registry = animation.Category.get_category_framedata("assets/sprites/tomato.json")["default"].get_registry()
+registry = animation.Category.get_category_framedata("assets/sprites/tomato.json")["idle"].get_registry()
 
 
 """

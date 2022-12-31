@@ -6,11 +6,10 @@
 
 # # print(r)
 
-import os
+# import os
 
-nn = "assets/sprites/tomato.json"
+# nn = "assets/sprites/tomato.json"
 
-print(os.path.relpath(nn))
-os.path.abspath(nn)
-
+# print(os.path.relpath(nn))
+# os.path.abspath(nn)
 

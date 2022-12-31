@@ -24,9 +24,11 @@ in vec2 fuv;
 uniform float utime;
 uniform sampler2D framebuffer;
 
+out vec4 FragColor;
+// 7 
 void main(){
     vec4 texcol = texture(framebuffer, fuv);
-    utime * 2;
+    float val = utime * 2.;
     vec4 col = vec4(fuv.x, 1.0, 1.0, 1.0);
-    gl_FragColor = texcol;
+    FragColor = texcol;
 }

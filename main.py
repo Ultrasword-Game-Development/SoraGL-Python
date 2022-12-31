@@ -1,6 +1,7 @@
 import pygame
 import engine
 import struct
+from engine import animation
 
 # ------------------------------ #
 # setup
@@ -48,6 +49,13 @@ ERRORS:
 
 image = SORA.load_image("assets/sprites/tomato.png")
 
+__ss = animation.SpriteSheet(SORA.load_image("assets/sprites/stages.png"), 16, 16, 0, 0)
+
+animation.Category.load_category("assets/sprites/tomato.json")
+registry = animation.Category.get_category_framedata("assets/sprites/tomato.json")["idle"].get_registry()
+
+
+
 # ------------------------------ #
 # game loop
 SORA.start_engine_time()
@@ -56,6 +64,14 @@ while SORA.RUNNING:
     # pygame update + render
     pygame.draw.rect(SORA.FRAMEBUFFER, (255, 0, 0), pygame.Rect(0, 0, 100, 100))
     SORA.FRAMEBUFFER.blit(image, (100, 100))
+
+    registry.update()
+    pygame.draw.rect(SORA.FRAMEBUFFER, (0, 0, 255), pygame.Rect((200, 120), registry.get_frame().get_size()))
+    SORA.FRAMEBUFFER.blit(registry.get_frame(), (200, 120))
+
+    for i, spr in enumerate(__ss):
+        pygame.draw.rect(SORA.FRAMEBUFFER, (255, 100, 100), pygame.Rect((i*16 + 200, 30), spr.get_frame().get_size()))
+        SORA.FRAMEBUFFER.blit(spr.get_frame(), (i*16 + 200, 30))
 
     # moderngl render
     ModernGL.update_context()

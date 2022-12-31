@@ -5,6 +5,7 @@ import os
 
 from engine import misc
 
+
 # ------------------------------ #
 # frame data
 
@@ -13,6 +14,10 @@ class FrameData:
         self.frame = frame
         self.duration = duration
         self.order = order
+
+    def get_frame(self):
+        """Get the frame"""
+        return self.frame
 
     def get_rotated_frame(self, angle: float):
         """Get a rotated version of the frame"""
@@ -25,6 +30,62 @@ class FrameData:
     def get_rotated_scaled_frame(self, angle: float, scale: float):
         """Get a rotated and scaled version of the frame"""
         return pygame.transform.rotozoom(self.frame, angle, scale)
+
+
+# ------------------------------ #
+# spritesheet!
+
+class SpriteSheet:
+    """
+    Sprite sheet
+    - given a big boi image --> split into multiple smaller pygame surfaces!
+    - given the width, height, spacex, spacey of each frame
+        - we split into smaller surfaces
+        - that can be accessed by ANIMATIONS + user if required
+    """
+    DEFAULT_FRAME_LENGTH = 1/10
+
+    def __init__(self, image: pygame.Surface, width: int, height: int, spacex: int, spacey: int):
+        self.image = image
+        self.width = width
+        self.height = height
+        self.spacex = spacex
+        self.spacey = spacey
+        self.frames = []
+        if self.image:
+            self.generate_frames()
+    
+    def generate_frames(self):
+        """Generate the frames"""
+        # parse out frames!!
+        self.frames.clear()
+        mx, my = self.image.get_size()
+        x, y, i = self.spacex, self.spacey, 0
+        while y < my:
+            while x < mx:
+                self.frames.append(FrameData(self.image.subsurface(x, y, self.width, self.height), 
+                        SpriteSheet.DEFAULT_FRAME_LENGTH, i))
+                x += self.width + self.spacex
+                i += 1
+            x = self.spacex
+            y += self.height + self.spacey
+        # easy :D
+    
+    def __len__(self):
+        """Get the number of frames"""
+        return len(self.frames)
+
+    def __getitem__(self, index: int):
+        """Get a frame at a specified index"""
+        return self.frames[index].get_frame()
+    
+    def get_frame_data(self, index: int):
+        """Get the frame data at a specified index"""
+        return self.frames[index]
+    
+    def __iter__(self):
+        """Iterate over the frames"""
+        return iter(self.frames)
 
 
 # ------------------------------ #
@@ -60,13 +121,14 @@ class Sequence:
     # animation sequence
     def __init__(self, frames: list, metadata: dict):
         # cannot manipulate this
-        self._frames = frames
+        self.sprite_sheet = SpriteSheet(None, 0, 0, 0, 0)
+        self.sprite_sheet.frames = frames
         self.duration = sum([f.duration for f in frames])
         self._metadata = metadata
 
     def get_frame(self, index: int):
         """Get a frame at a specified index"""
-        return self._frames[index]
+        return self.sprite_sheet[index]
     
     def get_duration(self):
         """Get the total duration of the animation sequence"""
@@ -74,11 +136,11 @@ class Sequence:
 
     def __len__(self):
         """Get the number of frames in the sequence"""
-        return len(self._frames)
+        return len(self.sprite_sheet)
 
     def __iter__(self):
         """Iterate over the frames in the sequence"""
-        return iter(self._frames)
+        return iter(self.sprite_sheet)
     
     def get_registry(self):
         """Get a sequence registry"""
@@ -134,23 +196,17 @@ class Category:
             fnum = int(fnum)
             if ani == '':
                 ani = 'default'
-
+            
             # extract frame data --> yeet into pygame surfacea
             surf = spritesheet.subsurface((frame['x'], frame['y']), (frame['w'], frame['h']))
             # make framedata -- other data kept out because unnecassary
             fdata = FrameData(surf, duration, fnum)
+
             # input into pframes
             if not ani in pframes:
                 pframes[ani] = []
             pframes[ani].append(fdata)
         # return pframe
         return (meta, pframes)
-        # if cat not in cls.SEQUENCES:
-        #     cls.SEQUENCES[cat] = pframes
-        # for key in pframes:
-        #     cls.SEQUENCES[key] = pframes[key]
-
-
-
 
 

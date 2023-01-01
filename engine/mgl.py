@@ -109,7 +109,7 @@ class Texture:
         if texname not in cls.TEXTURES:
             ntex = ModernGL.CTX.texture(surface.get_size(), c)
             ntex.filter = (moderngl.NEAREST, moderngl.NEAREST)
-            ntex.swizzle = 'ARGB' # TODO - swapped this
+            ntex.swizzle = 'BGRA' # TODO - swapped this
             cls.TEXTURES[texname] = ntex
         # upload texture data to GPU
         tdata = surface.get_view('1')

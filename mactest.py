@@ -26,9 +26,11 @@ TODO:
 
 ERRORS:
 1. resizing window increases RAM usage -- maybe opengl error? gc?
+2. 
 """
 
 image = SORA.load_image("assets/sprites/tomato.png")
+__ss = animation.SpriteSheet(SORA.load_image("assets/sprites/stages.png"), 16, 16, 0, 0)
 
 # ------------------------------ #
 # game loop
@@ -38,6 +40,10 @@ while SORA.RUNNING:
     # pygame update + render
     pygame.draw.rect(SORA.FRAMEBUFFER, (255, 0, 0), pygame.Rect(0, 0, 100, 100))
     SORA.FRAMEBUFFER.blit(image, (100, 100))
+    
+    for i, spr in enumerate(__ss):
+        pygame.draw.rect(SORA.FRAMEBUFFER, (255, 100, 100), pygame.Rect((i*16 + 200, 30), spr.get_frame().get_size()))
+        SORA.FRAMEBUFFER.blit(spr.get_frame(), (i*16 + 200, 30))
 
     registry.update()
     pygame.draw.rect(SORA.FRAMEBUFFER, (0, 0, 255), pygame.Rect((200, 120), registry.get_frame().get_size()))

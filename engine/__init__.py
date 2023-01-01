@@ -59,7 +59,7 @@ class SoraContext:
         cls.ACTIVE_CLOCKS.add(timer.hash)
     
     @classmethod
-    def get_timer(cls, limit: float=0, loop:bool=False):
+    def get_timer(cls, limit: float=0, loop: bool=False):
         """Get a timer object"""
         c = SoraContext.Timer(limit, loop)
         cls.ALL_CLOCKS[c.hash] = c

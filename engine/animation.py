@@ -77,7 +77,7 @@ class SpriteSheet:
 
     def __getitem__(self, index: int):
         """Get a frame at a specified index"""
-        print(self.frames)
+        # print(self.frames)
         return self.frames[index].get_frame()
     
     def get_frame_data(self, index: int):

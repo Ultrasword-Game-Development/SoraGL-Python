@@ -109,7 +109,7 @@ class Texture:
         if texname not in cls.TEXTURES:
             ntex = ModernGL.CTX.texture(surface.get_size(), c)
             ntex.filter = (moderngl.NEAREST, moderngl.NEAREST)
-            ntex.swizzle = 'BGRA'
+            ntex.swizzle = 'ARGB' # TODO - swapped this
             cls.TEXTURES[texname] = ntex
         # upload texture data to GPU
         tdata = surface.get_view('1')
@@ -212,7 +212,7 @@ class Buffer:
 class VAO:
     """
     Vertex Attribute Objects
-    - veyr useful -- layout for vertices in the opengl context
+    - very useful -- layout for vertices in the opengl context
     """
 
     def __init__(self, shader_path: str = ShaderProgram.DEFAULT):

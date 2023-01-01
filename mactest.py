@@ -19,7 +19,6 @@ SORA.create_context()
 animation.Category.load_category("assets/sprites/tomato.json")
 registry = animation.Category.get_category_framedata("assets/sprites/tomato.json")["idle"].get_registry()
 
-
 """
 TODO:
 4. cleaning up buffers --> releasing all gl context data

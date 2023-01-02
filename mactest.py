@@ -2,7 +2,7 @@ import pygame
 import engine
 import struct
 
-from engine import animation
+from engine import animation, scene
 
 # ------------------------------ #
 # setup
@@ -31,12 +31,18 @@ ERRORS:
 image = SORA.load_image("assets/sprites/tomato.png")
 __ss = animation.SpriteSheet(SORA.load_image("assets/sprites/stages.png"), 16, 16, 0, 0)
 
+sc = scene.Scene()
+
+scene.SceneHandler.push_scene(sc)
+
 # ------------------------------ #
 # game loop
 SORA.start_engine_time()
 while SORA.RUNNING:
     SORA.FRAMEBUFFER.fill((255, 255, 255, 255))
     # pygame update + render
+    scene.SceneHandler.update()
+
     pygame.draw.rect(SORA.FRAMEBUFFER, (255, 0, 0), pygame.Rect(0, 0, 100, 100))
     SORA.FRAMEBUFFER.blit(image, (100, 100))
     

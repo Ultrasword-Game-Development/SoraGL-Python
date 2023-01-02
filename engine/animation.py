@@ -1,4 +1,8 @@
 import engine
+
+if engine.SoraContext.DEBUG:
+    print("Activated animation.py")
+
 import pygame
 import json
 import os

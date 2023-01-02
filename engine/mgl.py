@@ -1,4 +1,7 @@
 import engine
+if engine.SoraContext.DEBUG:
+    print("Activated mgl.py")
+
 from . import misc
 import moderngl
 

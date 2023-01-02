@@ -5,7 +5,9 @@ import time
 
 
 class SoraContext:
-        
+    
+    DEBUG = True
+
     # ------------------------------ #
     # time + time + time
     ENGINE_UPTIME = 0
@@ -108,7 +110,7 @@ class SoraContext:
     # ------------------------------ #
     # window variables
 
-    FPS = 30
+    FPS = 60
     WSIZE = [1280, 720]
     WPREVSIZE = [1280, 720]
     WFLAGS = pygame.RESIZABLE | pygame.DOUBLEBUF
@@ -124,13 +126,14 @@ class SoraContext:
     @classmethod
     def initialize(cls, options: dict):
         """Initialize Sora Engine with options."""
-        cls.FPS = options["fps"]
-        cls.WSIZE = options["window_size"]
-        cls.WFLAGS = options["window_flags"]
-        cls.WBITS = options["window_bits"]
-        cls.FFLAGS = options["framebuffer_flags"]
-        cls.FSIZE = options["framebuffer_size"]
-        cls.FBITS = options["framebuffer_bits"]
+        cls.FPS = options["fps"] if "fps" in options else 60
+        cls.WSIZE = options["window_size"] if "window_size" in options else [1280, 720]
+        cls.WFLAGS = options["window_flags"] if "window_flags" in options else pygame.RESIZABLE | pygame.DOUBLEBUF
+        cls.WBITS = options["window_bits"] if "window_bits" in options else 32
+        cls.FFLAGS = options["framebuffer_flags"] if "framebuffer_flags" in options else pygame.SRCALPHA
+        cls.FSIZE = options["framebuffer_size"] if "framebuffer_size" in options else cls.WSIZE
+        cls.FBITS = options["framebuffer_bits"] if "framebuffer_bits" in options else 32
+        cls.DEBUG = options["debug"] if "debug" in options else False
         # add options as required!
         cls.MODERNGL = cls.is_flag_active(pygame.OPENGL)
         if cls.MODERNGL:

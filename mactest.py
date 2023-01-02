@@ -2,7 +2,7 @@ import pygame
 import engine
 import struct
 
-from engine import animation, scene
+from engine import animation, scene, physics, base_objects
 
 # ------------------------------ #
 # setup
@@ -26,12 +26,27 @@ TODO:
 ERRORS:
 1. resizing window increases RAM usage -- maybe opengl error? gc?
 2. 
+
+TODO v2:
+1. make more components + aspects (they come in pairs btw)
+2. start finalizing scene / layer system
+3. figure out chunks
 """
 
 image = SORA.load_image("assets/sprites/tomato.png")
 __ss = animation.SpriteSheet(SORA.load_image("assets/sprites/stages.png"), 16, 16, 0, 0)
 
 sc = scene.Scene()
+scw = scene.World()
+sc.add_layer(scw, 0)
+sce = physics.Entity()
+scw.add_entity(sce)
+
+# entity comp
+sce.add_component(base_objects.MovementComponent(1, 0.3))
+
+# aspects
+scw.add_aspect(base_objects.MovementAspect())
 
 scene.SceneHandler.push_scene(sc)
 

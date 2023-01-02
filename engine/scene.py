@@ -53,16 +53,14 @@ class EntityHandler:
     # ------------------------------ #
 
     def __init__(self, world):
-        self._ecount = 0
         self._entities = {}
         self._world = world
     
     def register_entity(self, entity):
         """Register the entity"""
-        self._ecount += 1
-        entity.eid = self._ecount
         entity.handler = self
-        self._entities[entity.get_id()] = entity
+        entity.world = self._world
+        self._entities[id(entity)] = entity
     
     def get_entity(self, eid):
         """Get the entity"""
@@ -98,14 +96,44 @@ class Chunk:
 # scene - aspects
 
 class Aspect:
-    def __init__(self):
+    def __init__(self, target_component_class):
         """Create a processor"""
+        # defined after added to world
+        self._world = None
+        # variables
         self.priority = 0
+        self._target = hash(target_component_class)
     
     def handle(self, *args, **kwargs):
         """base process function"""
         raise NotImplementedError("Process function not implemented")
 
+    def iterate_entities(self):
+        """Iterate through the entities"""
+        for entity in self._world._components[self._target]:
+            yield entity
+
+# ------------------------------ #
+# components
+
+class ComponentHandler:
+    COMPONENTS = {} # comp_hash: comp class
+
+    @classmethod
+    def register_component(cls, comp):
+        """Register the component"""
+        if hash(comp) not in cls.COMPONENTS:
+            cls.COMPONENTS[hash(comp)] = comp.__class__
+
+
+class Component:
+    def __init__(self):
+        """Create a component"""
+        ComponentHandler.register_component(self)
+    
+    def __hash__(self):
+        """Hash the component"""
+        return hash(self.__class__.__name__)
 
 # ------------------------------ #
 # world class
@@ -130,6 +158,28 @@ class World:
         for i, j in chunks.items():
             self.add_chunk(i, j)
 
+    def add_entity(self, entity):
+        """Add an entity to the world"""
+        self._ehandler.register_entity(entity)
+        for comp in entity.components:
+            self.add_component(entity, comp)
+
+    def add_component(self, entity, component):
+        """Add a component to an entity in the world"""
+        comp_hash = hash(component.__class__)
+        if comp_hash not in self._components:
+            self._components[comp_hash] = set()
+        self._components[comp_hash].add(entity)
+        # add to entity
+        entity._components[comp_hash] = component
+        component._entity = entity
+
+    def remove_component(self, entity, comp_class_hash):
+        """Remove a component from an entity"""
+        if comp_class_hash in self._components:
+            self._components[comp_class_hash].remove(entity)
+            entity.components.remove(comp_class_hash)
+
     def add_chunk(self, chunk_hash: int, chunk):
         """Add chunks to the world"""
         self._chunks[chunk_hash] = chunk
@@ -142,7 +192,7 @@ class World:
     def add_aspect(self, aspect, priority=0):
         """Add an aspect to the world"""
         aspect.priority = priority
-        aspect.world = self
+        aspect._world = self
         self._aspects.append(aspect)
         self._aspects.sort(key=lambda x: x.priority, reverse=True)
     
@@ -150,13 +200,16 @@ class World:
         """Remove a processor -- all instnaces of the same type"""
         for i in self._aspects:
             if isinstance(i, aspect_type):
-                del i.world
+                del i._world
                 self._aspects.remove(i)
 
-    def update(self, surface):
+    def update(self):
         """Update the world"""
         for i in self._chunks.values():
             i.update()
+        # update aspects
+        for aspect in self._aspects:
+            aspect.handle()
         # TODO - do I want to stick with this??? 
         # keep chunks --> they update entities!
 
@@ -179,6 +232,10 @@ class World:
         self._aspects.clear()
         self._ehandler.clear()
 
+    def clear_cache(self):
+        """Clear the cache"""
+        self._components.clear()
+
 
 # ------------------------------ #
 # scene
@@ -193,7 +250,7 @@ class Scene:
         """Add a layer to the scene"""
         layer.priority = priority
         self._layers.append(layer)
-        sefl._layers.sort(key=lambda x: x.priority, reverse=True)
+        self._layers.sort(key=lambda x: x.priority, reverse=True)
     
     def remove_layer(self, layer: World):
         """Remove a layer from the scene"""

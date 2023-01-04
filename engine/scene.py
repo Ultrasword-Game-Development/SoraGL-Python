@@ -96,12 +96,12 @@ class Chunk:
 # scene - aspects
 
 class Aspect:
-    def __init__(self, target_component_class):
+    def __init__(self, target_component_class, priority:int=0):
         """Create a processor"""
         # defined after added to world
         self._world = None
         # variables
-        self.priority = 0
+        self.priority = priority
         self._target = hash(target_component_class)
     
     def handle(self, *args, **kwargs):
@@ -127,13 +127,25 @@ class ComponentHandler:
 
 
 class Component:
-    def __init__(self):
+    def __init__(self, loaded_hash: int = None):
         """Create a component"""
+        # private
+        self._entity = None
+        
+        # public
         ComponentHandler.register_component(self)
-    
+        self.HASH = loaded_hash if loaded_hash != None else hash(self)
+        # print('component base class')
+        # print(self.HASH)
+        # print(hash(self))
+
     def __hash__(self):
         """Hash the component"""
         return hash(self.__class__.__name__)
+    
+    def get_hash(self):
+        """Get the pre-loaded hash"""
+        return self.HASH
 
 # ------------------------------ #
 # world class
@@ -146,7 +158,7 @@ class World:
         self._chunks = {}
         self._ehandler = EntityHandler(self)
         self._aspects = []
-        self._components = {} # comp_hash: [entities]
+        self._components = {} # comp_hash: {entities} (set)
 
         # variables
         self.render_distance = render_distance
@@ -174,11 +186,11 @@ class World:
         entity._components[comp_hash] = component
         component._entity = entity
 
-    def remove_component(self, entity, comp_class_hash):
+    def remove_component(self, entity, comp_class):
         """Remove a component from an entity"""
-        if comp_class_hash in self._components:
-            self._components[comp_class_hash].remove(entity)
-            entity.components.remove(comp_class_hash)
+        if comp_class.get_hash() in self._components:
+            self._components[comp_class.get_hash()].remove(entity)
+            entity.components.remove(comp_class.get_hash())
 
     def add_chunk(self, chunk_hash: int, chunk):
         """Add chunks to the world"""
@@ -189,12 +201,13 @@ class World:
         if chunk_hash in self._chunks:
             return self._chunks.pop(chunk_hash)
     
-    def add_aspect(self, aspect, priority=0):
+    def add_aspect(self, aspect):
         """Add an aspect to the world"""
-        aspect.priority = priority
         aspect._world = self
         self._aspects.append(aspect)
         self._aspects.sort(key=lambda x: x.priority, reverse=True)
+        # print("DEBUG: Aspect sorting", [x.priority for x in self._aspects])
+        # print(self._aspects)
     
     def remove_aspect(self, aspect_type):
         """Remove a processor -- all instnaces of the same type"""

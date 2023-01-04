@@ -39,14 +39,25 @@ __ss = animation.SpriteSheet(SORA.load_image("assets/sprites/stages.png"), 16, 1
 sc = scene.Scene()
 scw = scene.World()
 sc.add_layer(scw, 0)
-sce = physics.Entity()
-scw.add_entity(sce)
+sce1 = physics.Entity()
+sce2 = physics.Entity()
+
+# add entities to world first
+scw.add_entity(sce1)
+scw.add_entity(sce2)
+
 
 # entity comp
-sce.add_component(base_objects.MovementComponent(1, 0.3))
+sce1.add_component(base_objects.MovementComponent(1, 0.3))
+sce1.add_component(base_objects.Collision2DComponent(10, 10))
+
+sce2.add_component(base_objects.MovementComponent(2, 0.1))
+sce2.add_component(base_objects.Collision2DComponent(10, 10))
+
 
 # aspects
 scw.add_aspect(base_objects.MovementAspect())
+scw.add_aspect(base_objects.Collision2DAspect())
 
 scene.SceneHandler.push_scene(sc)
 

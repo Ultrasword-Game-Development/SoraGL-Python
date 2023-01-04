@@ -1,5 +1,6 @@
 print("Activating physics.py")
 
+from pygame import Rect as pRect
 from pygame import math as pgmath
 
 # create a base entity class using the entity system
@@ -12,10 +13,11 @@ class Entity:
 
         # private
         self._components = {}
+        self._alive = True
 
         # public
         self.position = pgmath.Vector2()
-        self.velocity = pgmath.Vector2()
+        self.rect = pRect(0, 0, 0, 0)
 
     # whenever components are added -- the world must be queried --> so that cache can be updated
 
@@ -47,6 +49,13 @@ class Entity:
         """Default update function"""
         pass
     
+    def entity_has_component(self, comp_class):
+        """Check if an entity has a component"""
+        return has(comp_class) in self._components
+
+    def kill(self):
+        """Kill the entity"""
+        self._alive = False
 
 
 

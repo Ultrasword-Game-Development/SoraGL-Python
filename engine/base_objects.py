@@ -9,13 +9,13 @@ import math
 
 """
 
-# ------------------------------ #
+# ------------------------------------------------------------ #
 # base physics objects - entity -- components
 # base aspect objects
+# ------------------------------------------------------------ #
 
-
-# movement
-
+# ------------------------------ #
+# movement 
 class MovementComponent(scene.Component):
     def __init__(self, velocity: float = 0.0, direction: float = 0.0):
         super().__init__()
@@ -25,7 +25,7 @@ class MovementComponent(scene.Component):
         # print(self.__class__.__name__)
         # print(hash(self))
 
-
+# aspect
 class MovementAspect(scene.Aspect):
     def __init__(self):
         super().__init__(MovementComponent, 5)
@@ -44,8 +44,8 @@ class MovementAspect(scene.Aspect):
             e.rect.center = e.position.xy
             # print(e.rect)
 
-# collision
-
+# ------------------------------ #
+# collision2d
 class Collision2DComponent(scene.Component):
     def __init__(self, width: int, height: int):
         super().__init__()
@@ -64,7 +64,7 @@ class Collision2DComponent(scene.Component):
             raise NotImplementedError(f"The area {new_area} is not supported yet! {__file__} {__package__}")
         self.width, self.height = new_area
 
-
+# aspect
 class Collision2DAspect(scene.Aspect):
     def __init__(self):
         super().__init__(Collision2DComponent)
@@ -75,14 +75,16 @@ class Collision2DAspect(scene.Aspect):
         # consider chunking
         pass
 
-
+# ------------------------------ #
 # sprite
+# NOTE: sprite / animated sprite must be added before renderer!
 
+# exception
 class MissingSprite(Exception):
     def __init__(self, *args):
         super().__init__(*args)
 
-
+# sprite
 class Sprite(scene.Component):
     def __init__(self, width: int, height: int, sprite = None):
         super().__init__()
@@ -121,7 +123,7 @@ class Sprite(scene.Component):
         self.width, self.height = new_area
         self.sprite = engine.SoraContext.scale_image(self.sprite, (self.width, self.height))
 
-
+# animated sprite
 class AnimatedSprite(Sprite):
     def __init__(self, width: int, height: int, registry):
         super().__init__(width, height, registry.get_frame())
@@ -137,7 +139,7 @@ class AnimatedSprite(Sprite):
         """Get the area"""
         return self._registry.get_frame().get_size()
 
-
+# renderer
 class SpriteRenderer(scene.Component):
     def __init__(self):
         super().__init__()
@@ -152,7 +154,7 @@ class SpriteRenderer(scene.Component):
         if not self._sprite:
             self._sprite = self._entity.get_component(AnimatedSprite)
 
-
+# aspect
 class SpriteRendererAspect(scene.Aspect):
     def __init__(self):
         super().__init__(SpriteRenderer)
@@ -169,8 +171,4 @@ class SpriteRendererAspect(scene.Aspect):
             # render the sprite
             engine.SoraContext.FRAMEBUFFER.blit(c_sprite.sprite, pos - (c_sprite.hwidth, c_sprite.hheight))
 
-
-# sprite rendering
-
-# NOTE: must add sprite comp before sprite renderer component!
-
+print("More objects to be added! base_objects.py")

@@ -44,36 +44,6 @@ class MovementAspect(scene.Aspect):
             e.rect.center = e.position.xy
             # print(e.rect)
 
-# ------------------------------ #
-# collision2d
-class Collision2DComponent(scene.Component):
-    def __init__(self, width: int, height: int):
-        super().__init__()
-        self.width = width
-        self.height = height
-
-    @property
-    def area(self):
-        """Get the area"""
-        return (self.width, self.height)
-    
-    @area.setter
-    def area(self, new_area: tuple):
-        """set a new area"""
-        if len(new_area) != 2:
-            raise NotImplementedError(f"The area {new_area} is not supported yet! {__file__} {__package__}")
-        self.width, self.height = new_area
-
-# aspect
-class Collision2DAspect(scene.Aspect):
-    def __init__(self):
-        super().__init__(Collision2DComponent)
-        self.priority = 10
-    
-    def handle(self):
-        """Handle Collisions for Collision2D Components"""
-        # consider chunking
-        pass
 
 # ------------------------------ #
 # sprite
@@ -170,5 +140,48 @@ class SpriteRendererAspect(scene.Aspect):
             pos = e.position.xy
             # render the sprite
             engine.SoraContext.FRAMEBUFFER.blit(c_sprite.sprite, pos - (c_sprite.hwidth, c_sprite.hheight))
+
+# ------------------------------ #
+# collision2d
+class Collision2DComponent(scene.Component):
+    def __init__(self, width: int, height: int):
+        super().__init__()
+        self.width = width
+        self.height = height
+
+    @property
+    def area(self):
+        """Get the area"""
+        return (self.width, self.height)
+    
+    @area.setter
+    def area(self, new_area: tuple):
+        """set a new area"""
+        if len(new_area) != 2:
+            raise NotImplementedError(f"The area {new_area} is not supported yet! {__file__} {__package__}")
+        self.width, self.height = new_area
+
+# aspect
+class Collision2DAspect(scene.Aspect):
+    def __init__(self):
+        super().__init__(Collision2DComponent)
+        self.priority = 10
+    
+    def handle(self):
+        """Handle Collisions for Collision2D Components"""
+        # consider chunking
+        pass
+
+# ------------------------------ #
+# handling collision
+
+
+
+
+
+
+
+
+
 
 print("More objects to be added! base_objects.py")

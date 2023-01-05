@@ -33,7 +33,6 @@ class SceneHandler:
         """Update the current scene"""
         cls._STACK[-1].update()
 
-
 # ------------------------------ #
 # scene -- handlers
 
@@ -79,8 +78,11 @@ class EntityHandler:
 
 class Chunk:
     def __init__(self, x: int, y: int):
-        self._hash = f"{x}-{y}"
+        # private
         self._intrinstic_entities = set()
+        self._hash = f"{x}-{y}"
+        
+        # public
         self.area = pygame.Rect()
 
     def __hash__(self):
@@ -90,7 +92,6 @@ class Chunk:
     def update(self):
         """Update the chunk"""
         pass
-
 
 # ------------------------------ #
 # scene - aspects
@@ -254,7 +255,6 @@ class World:
         """Clear the cache"""
         self._components.clear()
 
-
 # ------------------------------ #
 # scene
 
@@ -278,4 +278,3 @@ class Scene:
         """Update a scene"""
         for layer in self._layers:
             layer.update()
-

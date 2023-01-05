@@ -138,6 +138,10 @@ class Component:
         # print('component base class')
         # print(self.HASH)
         # print(hash(self))
+    
+    def on_add(self):
+        """When an added to an Entity"""
+        pass
 
     def __hash__(self):
         """Hash the component"""
@@ -185,6 +189,7 @@ class World:
         # add to entity
         entity._components[comp_hash] = component
         component._entity = entity
+        component.on_add()
 
     def remove_component(self, entity, comp_class):
         """Remove a component from an entity"""

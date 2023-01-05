@@ -48,16 +48,22 @@ scw.add_entity(sce2)
 
 
 # entity comp
-sce1.add_component(base_objects.MovementComponent(1, 0.3))
+sce1.add_component(base_objects.MovementComponent())
 sce1.add_component(base_objects.Collision2DComponent(10, 10))
+sce1.add_component(base_objects.Sprite(0, 0, image))
+sce1.add_component(base_objects.SpriteRenderer())
+sce1.position += (100, 100)
 
 sce2.add_component(base_objects.MovementComponent(2, 0.1))
 sce2.add_component(base_objects.Collision2DComponent(10, 10))
+sce2.add_component(base_objects.AnimatedSprite(0, 0, registry))
+sce2.add_component(base_objects.SpriteRenderer())
 
 
 # aspects
 scw.add_aspect(base_objects.MovementAspect())
 scw.add_aspect(base_objects.Collision2DAspect())
+scw.add_aspect(base_objects.SpriteRendererAspect())
 
 scene.SceneHandler.push_scene(sc)
 
@@ -68,9 +74,6 @@ while SORA.RUNNING:
     SORA.FRAMEBUFFER.fill((255, 255, 255, 255))
     # pygame update + render
     scene.SceneHandler.update()
-
-    pygame.draw.rect(SORA.FRAMEBUFFER, (255, 0, 0), pygame.Rect(0, 0, 100, 100))
-    SORA.FRAMEBUFFER.blit(image, (100, 100))
     
     for i, spr in enumerate(__ss):
         pygame.draw.rect(SORA.FRAMEBUFFER, (255, 100, 100), pygame.Rect((i*16 + 200, 30), spr.get_frame().get_size()))

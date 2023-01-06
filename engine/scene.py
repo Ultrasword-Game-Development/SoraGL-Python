@@ -102,10 +102,11 @@ class Chunk:
         # update all intrinstic entities
         for entity in self._intrinstic_entities:
             self._world._ehandler._entities[entity].update()
-            print(self._world._ehandler._entities[entity].c_chunk)
+            # print(self._world._ehandler._entities[entity].c_chunk)
         # debug update
         if engine.SoraContext.DEBUG:
             pygame.draw.rect(engine.SoraContext.FRAMEBUFFER, (255, 0, 0), self.area, 1)
+
 
 # ------------------------------ #
 # scene - aspects

@@ -43,10 +43,12 @@ scw.get_chunk(0, 0)
 sc.add_layer(scw, 0)
 sce1 = physics.Entity()
 sce2 = physics.Entity()
+sce3particle = physics.ParticleHandler(create_func=physics.ParticleHandler.DEFAULT_CREATE, update_func=physics.ParticleHandler.DEFAULT_UPDATE)
 
 # add entities to world first
 scw.add_entity(sce1)
 scw.add_entity(sce2)
+scw.add_entity(sce3particle)
 
 
 # entity comp

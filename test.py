@@ -16,8 +16,13 @@
 class X:
     def __init__(self, val):
         self.val = val
+        self.data = {}
     def __hash__(self):
         return hash(self.val)
+    def __setitem__(self, name, value):
+        self.data[name] = value
+    def __getitem__(self, name):
+        return self.data[name]
 
 
 a = X(1)
@@ -31,3 +36,8 @@ arr[a] = a
 arr[b] = b
 
 print(arr)
+
+a['a'] = 0
+print(a['a'])
+
+

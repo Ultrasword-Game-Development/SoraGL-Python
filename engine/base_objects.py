@@ -156,6 +156,8 @@ class Collision2DComponent(scene.Component):
     # square
     DEFAULT = {"mass": 10}
 
+    TARGETS = [physics.AABB, physics.Box2D]
+
     def __init__(self, width: int, height: int, angle: float = 0, mass: float = 10, hardness: float = 1.0, offset: list = None):
         super().__init__()
         self.width = width
@@ -167,6 +169,15 @@ class Collision2DComponent(scene.Component):
         self._area = self.width * self.height
         self._density = self._area / self._mass
         self._hardness = hardness
+        self._shape = None
+
+    def on_add(self):
+        """On add"""
+        for t in Collision2DComponent.TARGETS:
+            if self._entity.entity_has_component(t):
+                self._shape = self._entity.get_component(t)
+                break
+        # print(self._shape)
 
     @property
     def area(self):

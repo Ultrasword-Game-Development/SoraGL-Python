@@ -49,15 +49,21 @@ scw.add_entity(sce2)
 
 # entity comp
 sce1.add_component(base_objects.MovementComponent())
-sce1.add_component(base_objects.Collision2DComponent(10, 10))
 sce1.add_component(base_objects.Sprite(0, 0, image))
 sce1.add_component(base_objects.SpriteRenderer())
 sce1.position += (100, 100)
 
 sce2.add_component(base_objects.MovementComponent(2, 0.1))
-sce2.add_component(base_objects.Collision2DComponent(10, 10))
 sce2.add_component(base_objects.AnimatedSprite(0, 0, registry))
 sce2.add_component(base_objects.SpriteRenderer())
+
+# physics
+sce1.add_component(physics.AABB(10, 10))
+sce1.add_component(base_objects.Collision2DComponent(10, 10))
+
+sce2.add_component(physics.Box2D(10, 10, degrees=0))
+sce2.add_component(base_objects.Collision2DComponent(10, 10))
+
 
 
 # aspects

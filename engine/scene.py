@@ -77,13 +77,16 @@ class EntityHandler:
 # scene - chunks
 
 class Chunk:
-    def __init__(self, x: int, y: int):
+
+    def __init__(self, x: int, y: int, world, options: dict):
         # private
         self._intrinstic_entities = set()
         self._hash = f"{x}-{y}"
+        self._world = world
         
         # public
-        self.area = pygame.Rect()
+        self.area = pygame.Rect(x * options["chunkpixw"], y * options["chunkpixh"], 
+                                options["chunkpixw"] * (x+1), options["chunkpixh"] * (y+1))
 
     def __hash__(self):
         """Hash the chunk"""
@@ -91,7 +94,9 @@ class Chunk:
     
     def update(self):
         """Update the chunk"""
-        pass
+        # update all intrinstic entities
+        for entity in self._intrinstic_entities:
+            pass
 
 # ------------------------------ #
 # scene - aspects
@@ -163,11 +168,12 @@ class World:
     """
     Acts as layers within a scene
     """
-    def __init__(self, render_distance: int = 1, aspects: dict = {}, chunks: dict={}):
+    def __init__(self, options: dict, render_distance: int = 1, aspects: dict = {}, chunks: dict={}):
         self._chunks = {}
         self._ehandler = EntityHandler(self)
         self._aspects = []
         self._components = {} # comp_hash: {entities} (set)
+        self._options = options
 
         # variables
         self.render_distance = render_distance
@@ -178,6 +184,15 @@ class World:
             self.add_aspect(i, j)
         for i, j in chunks.items():
             self.add_chunk(i, j)
+
+    def get_chunk(self, x: int, y: int):
+        """Get the chunk"""
+        f = hash(f"{x}-{y}")
+        if f in self._chunks:
+            return self._chunks[f]
+        c = Chunk(x, y, self, self._options)
+        self._chunks[hash(c)] = c
+        return c
 
     def add_entity(self, entity):
         """Add an entity to the world"""

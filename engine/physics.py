@@ -66,7 +66,7 @@ class Entity:
     
     def entity_has_component(self, comp_class):
         """Check if an entity has a component"""
-        return has(comp_class) in self._components
+        return hash(comp_class) in self._components
 
     def kill(self):
         """Kill the entity"""
@@ -76,7 +76,13 @@ class Entity:
 # collision objects
 # ------------------------------------------------------------ #
 
-class AABB(scene.Component):
+class CollisionShape(scene.Component):
+    COLLISIONSHAPE = True
+    def __init__(self):
+        super().__init__()
+
+
+class AABB(CollisionShape):
     """
     AABB = square that moves --> no rotation
     """
@@ -86,12 +92,12 @@ class AABB(scene.Component):
     
     def iterate_vertices(self):
         """Iterator for vertices"""
-        yield self.rect.topleft
-        yield self.rect.topright
-        yield self.rect.bottomleft
-        yield self.rect.bottomright
+        yield self._entity.position + self.rect.topleft
+        yield self._entity.position + self.rect.topright
+        yield self._entity.position + self.rect.bottomleft
+        yield self._entity.position + self.rect.bottomright
 
-class Box2D(scene.Component):
+class Box2D(CollisionShape):
     """
     Box2D = square that moves + rotation
     """
@@ -136,7 +142,7 @@ class Box2D(scene.Component):
 
         # rotate each vertex around the center
         for vertex in vertices:
-            yield vertex.rotate(self._angle)
+            yield vertex.rotate(self._angle) + self._entity.position
 
 # ------------------------------------------------------------ #
 # SAT helper functions
@@ -189,8 +195,8 @@ def interval_aabb(comp, axis):
 # ------------------------------ #
 # register!
 
-register_interval_function(AABB, inteval_aabb)
-register_interval_function(Box2D, inteval_aabb) # inteval_box2d
+register_interval_function(AABB, interval_aabb)
+register_interval_function(Box2D, interval_aabb) # inteval_box2d
 
 # ------------------------------------------------------------ #
 # overlapping axis
@@ -207,14 +213,30 @@ def register_overlap_function(comp_class_a, comp_class_b, func):
 def overlap_AABBtoAABB(a, b, axis):
     """Check if two objects overlap on an axis"""
     # project points onto an axis then compare
-    to_check = []
+    i1 = get_interval(a, axis)
+    i2 = get_interval(b, axis)
+    return i1.x <= i2.y and i2.x <= i1.y
+
+# def overlap_AABBtoBox2D(a, b, axis):
+#     """Check if two objects overlap on an axis"""
+#     # project points onto an axis then compare
+#     i1 = get_interval(a, axis)
+#     i2 = get_interval(b, axis)
+#     return i1.x <= i2.y and i2.x <= i1.y
+
+# def overlap_Box2DtoBox2D(a, b, axis):
+#     """Check if two objects overlap on an axis"""
+#     # project points onto an axis then compare
+#     i1 = get_interval(a, axis)
+#     i2 = get_interval(b, axis)
+#     return i1.x <= i2.y and i2.x <= i1.y
 
 
 # ------------------------------ #
 # register!
 
 register_overlap_function(AABB, AABB, overlap_AABBtoAABB)
-
-
+register_overlap_function(AABB, Box2D, overlap_AABBtoAABB)
+register_overlap_function(Box2D, Box2D, overlap_AABBtoAABB)
 
 

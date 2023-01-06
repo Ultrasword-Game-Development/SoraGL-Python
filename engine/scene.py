@@ -1,3 +1,7 @@
+
+import json
+import pygame
+
 import engine
 if engine.SoraContext.DEBUG:
     print("Activating scene.py")
@@ -85,8 +89,9 @@ class Chunk:
         self._world = world
         
         # public
-        self.area = pygame.Rect(x * options["chunkpixw"], y * options["chunkpixh"], 
-                                options["chunkpixw"] * (x+1), options["chunkpixh"] * (y+1))
+        cpw, cph = options["chunkpixw"], options["chunkpixh"]
+        self.area = pygame.Rect(x * cpw, y * cph, (x+1) * cpw, (y+1) * cph)
+        # print(self.area)
 
     def __hash__(self):
         """Hash the chunk"""
@@ -96,7 +101,11 @@ class Chunk:
         """Update the chunk"""
         # update all intrinstic entities
         for entity in self._intrinstic_entities:
-            pass
+            self._world._ehandler._entities[entity].update()
+            print(self._world._ehandler._entities[entity].c_chunk)
+        # debug update
+        if engine.SoraContext.DEBUG:
+            pygame.draw.rect(engine.SoraContext.FRAMEBUFFER, (255, 0, 0), self.area, 1)
 
 # ------------------------------ #
 # scene - aspects
@@ -168,22 +177,40 @@ class World:
     """
     Acts as layers within a scene
     """
+
     def __init__(self, options: dict, render_distance: int = 1, aspects: dict = {}, chunks: dict={}):
         self._chunks = {}
+        self._active_chunks = set()
         self._ehandler = EntityHandler(self)
         self._aspects = []
         self._components = {} # comp_hash: {entities} (set)
         self._options = options
+        # rendering
+        self._center_chunk = [0, 0]
+        self._developer_data = {}
 
         # variables
         self.render_distance = render_distance
         self.aspect_times = {}
         
-        # update data
+        # add data to buffer
         for i, j in aspects.items():
             self.add_aspect(i, j)
         for i, j in chunks.items():
             self.add_chunk(i, j)
+        
+        # update active chunks
+        self.set_center_chunk(0, 0)
+
+    def set_center_chunk(self, x: int, y: int):
+        """Set the center chunk for rendering"""
+        self._center_chunk[0] = x
+        self._center_chunk[1] = y
+        # update active chunks
+        self._active_chunks.clear()
+        for i in range(self._center_chunk[0] - self.render_distance, self._center_chunk[0] + self.render_distance + 1):
+            for j in range(self._center_chunk[1] - self.render_distance, self._center_chunk[1] + self.render_distance + 1):
+                self._active_chunks.add(hash(self.get_chunk(i, j)))
 
     def get_chunk(self, x: int, y: int):
         """Get the chunk"""
@@ -199,6 +226,16 @@ class World:
         self._ehandler.register_entity(entity)
         for comp in entity.components:
             self.add_component(entity, comp)
+        # add to chunk
+        self.get_chunk(0, 0)._intrinstic_entities.add(id(entity))
+
+    def update_entity_chunk(self, entity, old, new):
+        """Update the chunk intrinsic properties for entities"""
+        ochunk = self.get_chunk(old[0], old[1])
+        nchunk = self.get_chunk(new[0], new[1])
+        ochunk._intrinstic_entities.remove(id(entity))
+        nchunk._intrinstic_entities.add(id(entity))
+        entity.c_chunk[0], entity.c_chunk[1] = new
 
     def add_component(self, entity, component):
         """Add a component to an entity in the world"""
@@ -251,8 +288,10 @@ class World:
 
     def update(self):
         """Update the world"""
-        for i in self._chunks.values():
-            i.update()
+        for i in self._active_chunks:
+            self._chunks[i].update()
+        # for i in self._chunks.values():
+        #     i.update()
         # update aspects
         for aspect in self._aspects:
             aspect.handle()
@@ -286,9 +325,15 @@ class World:
 # scene
 
 class Scene:
-    def __init__(self):
+    DEFAULT_CONFIG = "assets/config.json"
+
+    def __init__(self, config: dict = None):
         """Create a scene object"""
+        # private
         self._layers = []
+        self._config = config if config else load_config(Scene.DEFAULT_CONFIG)
+
+        # public
         self.priority = 0
     
     def add_layer(self, layer: World, priority: int = 0):
@@ -301,7 +346,45 @@ class Scene:
         """Remove a layer from the scene"""
         self._layers.remove(layer)
     
+    def get_config(self):
+        """Get the scene configuration"""
+        return self._config
+
     def update(self):
         """Update a scene"""
         for layer in self._layers:
             layer.update()
+
+
+# ------------------------------ #
+
+# configuration for ECS
+DEFAULT_CONFIG = {"chunkpixw": 256, "chunkpixh": 256, "chunktilew": 16, "chunktileh": 16, "tilepixw": 16, "tilepixh": 16}
+
+def configure_ecs(**kwargs):
+    """Filter out invalid configurations"""
+    # global DEFAULT_CONFIG
+    config = {}
+    for k, v in kwargs.items():
+        if k in DEFAULT_CONFIG:
+            config[k] = v
+    # default values
+    for each, val in DEFAULT_CONFIG.items():
+        if each not in config:
+            config[each] = val
+    # calculate chunk pixel values
+    config["chunkpixw"] = config["chunktilew"] * config["tilepixw"]
+    config["chunkpixh"] = config["chunktileh"] * config["tilepixh"]
+
+    return config
+
+def save_config(config, fname):
+    """Save a configuration for ECS"""
+    with open(fname, 'w') as file:
+        json.dump(file, config)
+
+def load_config(fname):
+    """Load a configuration for ECS"""
+    with open(fname, 'r') as file:
+        return configure_ecs(**json.load(file))
+

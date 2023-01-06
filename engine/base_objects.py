@@ -3,7 +3,9 @@ from engine import scene, physics, mgl, animation
 
 import math
 
+from pygame import Rect as pgRect
 from pygame import math as pgmath
+from pygame import draw as pgdraw
 
 """
 1. sprite / rendering components + rendering aspect
@@ -52,6 +54,15 @@ class MovementAspect(scene.Aspect):
             # push object towards position
             e.rect.center = e.position.xy
             # print(e.rect)
+
+
+
+            # handle if leaving chunk
+            cx = e.rect.centerx // e.world._options["chunkpixw"]
+            cy = e.rect.centery // e.world._options["chunkpixh"]
+            if cx != e.c_chunk[0] or cy != e.c_chunk[1]:
+                # update chunk data
+                self._world.update_entity_chunk(e, e.c_chunk, (cx, cy))
 
 
 # ------------------------------ #
@@ -149,6 +160,23 @@ class SpriteRendererAspect(scene.Aspect):
             pos = e.position.xy
             # render the sprite
             engine.SoraContext.FRAMEBUFFER.blit(c_sprite.sprite, pos - (c_sprite.hwidth, c_sprite.hheight))
+
+class SpriteRendererAspectDebug(scene.Aspect):
+    def __init__(self):
+        super().__init__(SpriteRenderer)
+        self.priority = 0
+    
+    def handle(self):
+        """Render the sprites"""
+        for e in self.iterate_entities():
+            # get the sprite
+            c_sprite = e.get_component(SpriteRenderer)._sprite
+            if not c_sprite.sprite: continue
+            # get the position
+            pos = e.position.xy
+            # render the sprite
+            engine.SoraContext.FRAMEBUFFER.blit(c_sprite.sprite, pos - (c_sprite.hwidth, c_sprite.hheight))
+            pgdraw.rect(engine.SoraContext.FRAMEBUFFER, (0, 0, 255), pgRect(pos - (c_sprite.hwidth, c_sprite.hheight), c_sprite.sprite.get_size()), 1)
 
 # ------------------------------ #
 # collision2d

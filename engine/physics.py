@@ -31,6 +31,7 @@ class Entity:
         self._alive = True
 
         # public
+        self.c_chunk = [0, 0]
         self.position = pgmath.Vector2()
         self.rect = pRect(0, 0, 0, 0)
 
@@ -62,6 +63,7 @@ class Entity:
 
     def update(self):
         """Default update function"""
+        # print(id(self))
         pass
     
     def entity_has_component(self, comp_class):

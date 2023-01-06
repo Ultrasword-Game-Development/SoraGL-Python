@@ -15,9 +15,9 @@ SORA.create_context()
 # ------------------------------ #
 # import gl?
 if SORA.is_flag_active(pygame.OPENGL):
-    print('loaded')
     from engine import mgl
     from engine.mgl import ModernGL
+    print('Configured Pygame for OpenGL')
 
 
 # ------------------------------ #

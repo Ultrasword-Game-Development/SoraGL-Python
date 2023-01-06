@@ -3,11 +3,20 @@ from engine import scene, physics, mgl, animation
 
 import math
 
+from pygame import math as pgmath
+
 """
 1. sprite / rendering components + rendering aspect
 2. collision detection component + collision handling aspect
 
 """
+
+# ------------------------------------------------------------ #
+# errors
+
+class MissingComponent(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
 
 # ------------------------------------------------------------ #
 # base physics objects - entity -- components
@@ -144,10 +153,20 @@ class SpriteRendererAspect(scene.Aspect):
 # ------------------------------ #
 # collision2d
 class Collision2DComponent(scene.Component):
-    def __init__(self, width: int, height: int):
+    # square
+    DEFAULT = {"mass": 10}
+
+    def __init__(self, width: int, height: int, angle: float = 0, mass: float = 10, hardness: float = 1.0, offset: list = None):
         super().__init__()
         self.width = width
         self.height = height
+        self.angle = angle
+        self._offset = pgmath.Vector2(offset) if offset else pgmath.Vector2(0, 0)
+        # other arguments
+        self._mass = mass
+        self._area = self.width * self.height
+        self._density = self._area / self._mass
+        self._hardness = hardness
 
     @property
     def area(self):
@@ -161,23 +180,61 @@ class Collision2DComponent(scene.Component):
             raise NotImplementedError(f"The area {new_area} is not supported yet! {__file__} {__package__}")
         self.width, self.height = new_area
 
+    def get_relative_position(self):
+        """Get the relative position"""
+        return self._offset + self._entity.position
+
+    def get_offset(self):
+        """Get the offset"""
+        return self._offset
+
+    def is_collided(self, other):
+        """Check if this entity is collided with another entity"""
+        # get the position
+        pos = self.get_relative_position()
+        other_pos = other.get_relative_position()
+        # using SAT for AABB collision
+        
+
+# https://github.com/codingminecraft/MarioYoutube/blob/265780291acc7693816ff2723c227ae89a171466/src/main/java/physics2d/rigidbody/IntersectionDetector2D.java
+
+
+
 # aspect
 class Collision2DAspect(scene.Aspect):
     def __init__(self):
         super().__init__(Collision2DComponent)
         self.priority = 10
+        # private
+        self._collisions = []
     
+    def has_collision(self, e1, e2):
+        """Check if there are collisions"""
+        pass
+
     def handle(self):
         """Handle Collisions for Collision2D Components"""
         # consider chunking
+        
         pass
 
 # ------------------------------ #
 # handling collision
 
-
-
-
+class Collision2DHandler:
+    def __init__(self):
+        super().__init__(0)
+        self._collision2d_aspect = None
+    
+    def on_add(self):
+        """On add"""
+        self._collision2d_aspect = self._world.get_aspect(Collision2DAspect)
+        if not self._collision2d_aspect:
+            raise MissingComponent("Collision2DAspect is not an added component")
+    
+    def handle(self):
+        # perform collisions!
+        pass
 
 
 

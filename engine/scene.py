@@ -105,6 +105,10 @@ class Aspect:
         self.priority = priority
         self._target = hash(target_component_class)
     
+    def on_add(self):
+        """When added to the world"""
+        pass
+
     def handle(self, *args, **kwargs):
         """base process function"""
         raise NotImplementedError("Process function not implemented")
@@ -211,10 +215,18 @@ class World:
         """Add an aspect to the world"""
         aspect._world = self
         self._aspects.append(aspect)
+        aspect.on_add()
         self._aspects.sort(key=lambda x: x.priority, reverse=True)
         # print("DEBUG: Aspect sorting", [x.priority for x in self._aspects])
         # print(self._aspects)
     
+    def get_aspect(self, aspect_class):
+        """Get an aspect"""
+        for i in self._aspects:
+            if isinstance(i, aspect_class):
+                return i
+        return None
+
     def remove_aspect(self, aspect_type):
         """Remove a processor -- all instnaces of the same type"""
         for i in self._aspects:

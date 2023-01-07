@@ -1,7 +1,10 @@
 import pygame
 import engine
 import struct
-from engine import animation
+
+from pygame import draw as pgdraw
+from pygame import math as pgmath
+from engine import animation, scene, physics, base_objects
 
 # ------------------------------ #
 # setup
@@ -47,13 +50,69 @@ ERRORS:
 1. resizing window increases RAM usage -- maybe opengl error? gc?
 """
 
-image = SORA.load_image("assets/sprites/tomato.png")
-
-__ss = animation.SpriteSheet(SORA.load_image("assets/sprites/stages.png"), 16, 16, 0, 0)
 
 animation.Category.load_category("assets/sprites/tomato.json")
 registry = animation.Category.get_category_framedata("assets/sprites/tomato.json")["idle"].get_registry()
 
+
+image = SORA.load_image("assets/sprites/tomato.png")
+__ss = animation.SpriteSheet(SORA.load_image("assets/sprites/stages.png"), 16, 16, 0, 0)
+
+sc = scene.Scene(config=scene.load_config(scene.Scene.DEFAULT_CONFIG))
+scw = scene.World(sc.get_config())
+scw.get_chunk(0, 0)
+sc.add_layer(scw, 0)
+
+sce1 = physics.Entity()
+
+sce2 = physics.Entity()
+
+sce3particle = physics.ParticleHandler(create_func=physics.ParticleHandler.DEFAULT_CREATE, 
+                update_func=physics.ParticleHandler.DEFAULT_UPDATE)
+sce3particle.position += (100, 100)
+
+sce4particle = physics.ParticleHandler(create_func="square", update_func="square")
+sce4particle.position += (200, 100)
+sce4particle["inverval"] = 0.5
+
+sce5particle = physics.ParticleHandler(create_func="triangle", update_func="triangle")
+sce5particle.position += (200, 150)
+sce5particle["interval"] = 0.4
+
+# add entities to world first
+scw.add_entity(sce1)
+scw.add_entity(sce2)
+scw.add_entity(sce3particle)
+scw.add_entity(sce4particle)
+scw.add_entity(sce5particle)
+
+
+# entity comp
+sce1.add_component(base_objects.MovementComponent())
+sce1.add_component(base_objects.Sprite(0, 0, image))
+sce1.add_component(base_objects.SpriteRenderer())
+sce1.position += (100, 100)
+
+sce2.add_component(base_objects.MovementComponent(2, 0.1))
+sce2.add_component(base_objects.AnimatedSprite(0, 0, registry))
+sce2.add_component(base_objects.SpriteRenderer())
+
+
+# physics
+sce1.add_component(physics.AABB(10, 10))
+sce1.add_component(base_objects.Collision2DComponent(10, 10))
+
+sce2.add_component(physics.Box2D(10, 10, degrees=0))
+sce2.add_component(base_objects.Collision2DComponent(10, 10))
+
+
+# aspects
+scw.add_aspect(base_objects.MovementAspect())
+scw.add_aspect(base_objects.Collision2DAspect())
+# scw.add_aspect(base_objects.SpriteRendererAspect())
+scw.add_aspect(base_objects.SpriteRendererAspectDebug())
+
+scene.SceneHandler.push_scene(sc)
 
 
 # ------------------------------ #
@@ -62,16 +121,16 @@ SORA.start_engine_time()
 while SORA.RUNNING:
     SORA.FRAMEBUFFER.fill((255, 255, 255, 255))
     # pygame update + render
-    pygame.draw.rect(SORA.FRAMEBUFFER, (255, 0, 0), pygame.Rect(0, 0, 100, 100))
-    SORA.FRAMEBUFFER.blit(image, (100, 100))
+    scene.SceneHandler.update()
 
-    registry.update()
-    pygame.draw.rect(SORA.FRAMEBUFFER, (0, 0, 255), pygame.Rect((200, 120), registry.get_frame().get_size()))
-    SORA.FRAMEBUFFER.blit(registry.get_frame(), (200, 120))
 
-    for i, spr in enumerate(__ss):
-        pygame.draw.rect(SORA.FRAMEBUFFER, (255, 100, 100), pygame.Rect((i*16 + 200, 30), spr.get_frame().get_size()))
-        SORA.FRAMEBUFFER.blit(spr.get_frame(), (i*16 + 200, 30))
+    # registry.update()
+    # pygame.draw.rect(SORA.FRAMEBUFFER, (0, 0, 255), pygame.Rect((200, 120), registry.get_frame().get_size()))
+    # SORA.FRAMEBUFFER.blit(registry.get_frame(), (200, 120))
+
+    # for i, spr in enumerate(__ss):
+    #     pygame.draw.rect(SORA.FRAMEBUFFER, (255, 100, 100), pygame.Rect((i*16 + 200, 30), spr.get_frame().get_size()))
+    #     SORA.FRAMEBUFFER.blit(spr.get_frame(), (i*16 + 200, 30))
 
     # moderngl render
     ModernGL.update_context()

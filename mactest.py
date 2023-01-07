@@ -2,6 +2,8 @@ import pygame
 import engine
 import struct
 
+from pygame import draw as pgdraw
+from pygame import math as pgmath
 from engine import animation, scene, physics, base_objects
 
 # ------------------------------ #
@@ -41,14 +43,29 @@ sc = scene.Scene(config=scene.load_config(scene.Scene.DEFAULT_CONFIG))
 scw = scene.World(sc.get_config())
 scw.get_chunk(0, 0)
 sc.add_layer(scw, 0)
+
 sce1 = physics.Entity()
+
 sce2 = physics.Entity()
-sce3particle = physics.ParticleHandler(create_func=physics.ParticleHandler.DEFAULT_CREATE, update_func=physics.ParticleHandler.DEFAULT_UPDATE)
+
+sce3particle = physics.ParticleHandler(create_func=physics.ParticleHandler.DEFAULT_CREATE, 
+                update_func=physics.ParticleHandler.DEFAULT_UPDATE)
+sce3particle.position += (100, 100)
+
+sce4particle = physics.ParticleHandler(create_func="square", update_func="square")
+sce4particle.position += (200, 100)
+sce4particle["inverval"] = 0.5
+
+sce5particle = physics.ParticleHandler(create_func="triangle", update_func="triangle")
+sce5particle.position += (200, 150)
+sce5particle["interval"] = 0.4
 
 # add entities to world first
 scw.add_entity(sce1)
 scw.add_entity(sce2)
 scw.add_entity(sce3particle)
+scw.add_entity(sce4particle)
+scw.add_entity(sce5particle)
 
 
 # entity comp
@@ -60,6 +77,7 @@ sce1.position += (100, 100)
 sce2.add_component(base_objects.MovementComponent(2, 0.1))
 sce2.add_component(base_objects.AnimatedSprite(0, 0, registry))
 sce2.add_component(base_objects.SpriteRenderer())
+
 
 # physics
 sce1.add_component(physics.AABB(10, 10))
@@ -88,6 +106,8 @@ while SORA.RUNNING:
     # for i, spr in enumerate(__ss):
     #     pygame.draw.rect(SORA.FRAMEBUFFER, (255, 100, 100), pygame.Rect((i*16 + 200, 30), spr.get_frame().get_size()))
     #     SORA.FRAMEBUFFER.blit(spr.get_frame(), (i*16 + 200, 30))
+    # p = [pgmath.Vector2(0, 0), pgmath.Vector2(100, 100), pgmath.Vector2(100, 150)]
+    # pgdraw.polygon(SORA.FRAMEBUFFER, (0, 0, 255), p, 1)
 
     registry.update()
     SORA.FRAMEBUFFER.blit(registry.get_frame(), (200, 120))

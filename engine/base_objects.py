@@ -1,6 +1,7 @@
 import engine
 from engine import scene, physics, mgl, animation
 
+import random
 import math
 
 from pygame import Rect as pgRect
@@ -237,8 +238,6 @@ class Collision2DComponent(scene.Component):
 
 # https://github.com/codingminecraft/MarioYoutube/blob/265780291acc7693816ff2723c227ae89a171466/src/main/java/physics2d/rigidbody/IntersectionDetector2D.java
 
-
-
 # aspect
 class Collision2DAspect(scene.Aspect):
     def __init__(self):
@@ -276,8 +275,86 @@ class Collision2DHandler:
         pass
 
 
+# ------------------------------------------------------------ #
+# particle system
+# ------------------------------------------------------------ #
+
+# ------------------------------ #
+# square particle
+
+def create_square_particle(parent, **kwargs):
+    """Create a square particle"""
+    r = kwargs["radius"] if "radius" in kwargs else 10
+    return [parent.position.xy, 
+            kwargs["vel"] if "vel" in kwargs else pgmath.Vector2((random.random()-0.5)*100, (random.random()-0.5)*100),
+            0, # angle,
+            kwargs["angv"] if "angv" in kwargs else random.random() * 100,
+            list(kwargs["color"]) if "color" in kwargs else [0, 0, 255],
+            kwargs["life"] if "life" in kwargs else 1.0,
+            (physics.RIGHT * r, physics.UP * r, physics.LEFT * r, physics.DOWN * r), # points
+            parent.get_new_particle_id()]
+
+def update_square_particle(parent, particle):
+    """Update a square particle"""
+    # check if the particle is dead
+    particle[5] -= engine.SoraContext.DELTA
+    # print(particle)
+    if particle[5] <= 0:
+        parent.remove_particle(particle)
+        return
+    # set color value
+    # particle[4][0] = int(math.sin(engine.SoraContext.ENGINE_UPTIME) * 127 + 127)
+    # particle[4][1] = int(math.cos(engine.SoraContext.ENGINE_UPTIME) * 127 + 127)
+    # particle[4][2] = int(math.sin(particle[0].x) * 127 + 127)
+    # just spin + move in random direction
+    particle[0] += particle[1] * engine.SoraContext.DELTA
+    particle[2] += particle[3] * engine.SoraContext.DELTA
+    # render -- square (that rotates)
+    points = [i.rotate(particle[2]) + particle[0] for i in particle[6]]
+    pgdraw.polygon(engine.SoraContext.FRAMEBUFFER, particle[4], points, 1)
 
 
+# register
+physics.ParticleHandler.register_create_function("square", create_square_particle)
+physics.ParticleHandler.register_update_function("square", update_square_particle)
 
+# ------------------------------ #
+# triangle particles
+
+def create_triangle_particle(parent, **kwargs):
+    """Create a square particle"""
+    r = kwargs["radius"] if "radius" in kwargs else 10
+    return [parent.position.xy, 
+            kwargs["vel"] if "vel" in kwargs else pgmath.Vector2((random.random()-0.5)*100, (random.random()-0.5)*100),
+            0, # angle,
+            kwargs["angv"] if "angv" in kwargs else random.random() * 1000,
+            list(kwargs["color"]) if "color" in kwargs else [0, 0, 255],
+            kwargs["life"] if "life" in kwargs else 1.0,
+            (physics.RIGHT * r, physics.RIGHT.rotate(120) * r, physics.RIGHT.rotate(240) * r), # points
+            parent.get_new_particle_id()]
+
+def update_triangle_particle(parent, particle):
+    """Update a square particle"""
+    # check if the particle is dead
+    particle[5] -= engine.SoraContext.DELTA
+    # print(particle)
+    if particle[5] <= 0:
+        parent.remove_particle(particle)
+        return
+    # set color value
+    particle[4][0] = int(math.sin(engine.SoraContext.ENGINE_UPTIME) * 127 + 127)
+    particle[4][1] = int(math.cos(engine.SoraContext.ENGINE_UPTIME) * 127 + 127)
+    particle[4][2] = int(math.sin(particle[0].x) * 127 + 127)
+    # just spin + move in random direction
+    particle[0] += particle[1] * engine.SoraContext.DELTA
+    particle[2] += particle[3] * engine.SoraContext.DELTA
+    # render -- square (that rotates)
+    points = [i.rotate(particle[2]) + particle[0] for i in particle[6]]
+    pgdraw.polygon(engine.SoraContext.FRAMEBUFFER, particle[4], points, 1)
+
+
+# register
+physics.ParticleHandler.register_create_function("triangle", create_triangle_particle)
+physics.ParticleHandler.register_update_function("triangle", update_triangle_particle)
 
 print("More objects to be added! base_objects.py")

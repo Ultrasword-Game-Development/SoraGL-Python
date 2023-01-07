@@ -1,10 +1,12 @@
 print("Activating physics.py")
 
 import engine
+import random
 
 from engine import scene
 from pygame import Rect as pRect
 from pygame import math as pgmath
+from pygame import draw as pgdraw
 
 # ------------------------------------------------------------ #
 # global constnats
@@ -294,7 +296,7 @@ class ParticleHandler(Entity):
     
     # ------------------------------ #
 
-    def __init__(self, max_particles: int = 100, create_func: str = None, update_func: str = None, create_timer_func: str = None):
+    def __init__(self, args: dict = {}, max_particles: int = 100, create_func: str = None, update_func: str = None, create_timer_func: str = None):
         super().__init__()
         # private
         self._particles = {}
@@ -304,11 +306,18 @@ class ParticleHandler(Entity):
             "interval": 0.1
         }
         self._timer = 0
+        self._remove = []
+        self.args = args
 
         # public
         self.create_timer_func = ParticleHandler.get_create_timer_funcion(name=create_timer_func)
         self.create_func = ParticleHandler.get_create_function(name=create_func)
         self.update_func = ParticleHandler.get_update_function(name=update_func)
+    
+    def get_new_particle_id(self):
+        """Get a new particle id"""
+        self._particle_count += 1
+        return self._particle_count
 
     @property
     def data(self):
@@ -323,36 +332,46 @@ class ParticleHandler(Entity):
         """Set a piece of data"""
         self._data[name] = value
     
+    def remove_particle(self, particle):
+        """Remove a particle"""
+        self._remove.append(particle[-1])
+
     def update(self):
         """Update the Particle Handler"""
         self.create_timer_func(self)
         for particle in self._particles.values():
             self.update_func(self, particle)
+        # remove timer
+        for i in self._remove:
+            del self._particles[i]
+        # self._particle_count -= len(self._remove) # when removing particles bad things happen
+        self._remove.clear()
 
 
 # ------------------------------ #
 # default for circle particles
 # attribs = [pos, vel, radius, color, life]
 # create function
-ParticleHandler.register_create_function(ParticleHandler.DEFAULT_CREATE, 
-            lambda parent, **kwargs: [parent.position.xy, 
-                        kwargs["vel"] if "vel" in kwargs else pgmath.Vector2(), 
-                        kwargs["radius"] if "radius" in kwargs else 5, 
-                        kwargs["color"] if "color" in kwargs else (0, 0, 255), 
-                        kwargs["life"] if "life" in kwargs else 1.0])
+def _default_create(parent, **kwargs):
+    """Default create function for particles"""
+    return [parent.position.xy, 
+            kwargs["vel"] if "vel" in kwargs else pgmath.Vector2(random.random()-0.5, -5),
+            kwargs["radius"] if "radius" in kwargs else 2, 
+            kwargs["color"] if "color" in kwargs else (0, 0, 255),
+            kwargs["life"] if "life" in kwargs else 1.0,
+            parent.get_new_particle_id()]
 
 # update function
 def _default_update(parent, particle):
     """Default update function for particles"""
     # gravity
-    particle[1] += GRAVITY
-    # move
-    particle[0] += particle[1] * engine.SoraContext.DELTA
-    particle[6] -= engine.SoraContext.DELTA
-    if particle[6] <= 0:
-        del parent._particles[particle]
-        parent._particle_count -= 1
+    particle[1] += GRAVITY * engine.SoraContext.DELTA
+    particle[4] -= engine.SoraContext.DELTA
+    if particle[4] <= 0:
+        parent.remove_particle(particle)
         return
+    # move
+    particle[0] += particle[1]
     # render
     pgdraw.circle(engine.SoraContext.FRAMEBUFFER, particle[3], particle[0], particle[2]) #, 1)
 
@@ -362,9 +381,13 @@ def _default_timer(parent):
     parent._timer += engine.SoraContext.DELTA
     if parent._timer >= parent._data["interval"]:
         parent._timer = 0
-        parent.create_func(parent)
+        particle = parent.create_func(parent, **parent.args)
+        # print("created particle")
+        parent._particles[particle[-1]] = particle
+        # print(parent._particle_count)
 
 # update function
+ParticleHandler.register_create_function(ParticleHandler.DEFAULT_CREATE, _default_create)
 ParticleHandler.register_update_function(ParticleHandler.DEFAULT_UPDATE, _default_update)
 ParticleHandler.register_timer_function(ParticleHandler.DEFAULT_TIMER, _default_timer)
 

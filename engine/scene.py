@@ -1,12 +1,12 @@
-
+# ------------------------------------------------------------ #
 import json
 import pygame
-
+# ------------------------------------------------------------ #
 import engine
 if engine.SoraContext.DEBUG:
     print("Activating scene.py")
 from queue import deque
-
+# ------------------------------------------------------------ #
 
 # ------------------------------ #
 # scenehandler
@@ -58,12 +58,20 @@ class EntityHandler:
     def __init__(self, world):
         self._entities = {}
         self._world = world
+        self._new_entities = set()
     
+    def initialize_entities_at_end_of_update(self):
+        """Initialize the entities at the end of the update"""
+        for e in self._new_entities:
+            self._entities[e].on_ready()
+        self._new_entities.clear()
+
     def register_entity(self, entity):
         """Register the entity"""
         entity.handler = self
         entity.world = self._world
         self._entities[id(entity)] = entity
+        self._new_entities.add(id(entity))
     
     def get_entity(self, eid):
         """Get the entity"""
@@ -131,7 +139,7 @@ class Aspect:
     def iterate_entities(self):
         """Iterate through the entities"""
         for entity in self._world._components[self._target]:
-            yield entity
+            yield self._world._ehandler._entities[entity]
 
 # ------------------------------ #
 # components
@@ -222,6 +230,16 @@ class World:
         self._chunks[hash(c)] = c
         return c
 
+    def iter_active_entities(self):
+        """Iterate through the active entities"""
+        for chunk in self._active_chunks:
+            for entity in self._chunks[chunk]._intrinstic_entities:
+                yield self._ehandler._entities[entity]
+
+    def get_entity(self, eid):
+        """Get the entity"""
+        return self._ehandler._entities[eid]
+
     def add_entity(self, entity):
         """Add an entity to the world"""
         self._ehandler.register_entity(entity)
@@ -243,7 +261,7 @@ class World:
         comp_hash = hash(component.__class__)
         if comp_hash not in self._components:
             self._components[comp_hash] = set()
-        self._components[comp_hash].add(entity)
+        self._components[comp_hash].add(id(entity))
         # add to entity
         entity._components[comp_hash] = component
         component._entity = entity
@@ -263,7 +281,7 @@ class World:
         """Remove a chunk"""
         if chunk_hash in self._chunks:
             return self._chunks.pop(chunk_hash)
-    
+
     def add_aspect(self, aspect):
         """Add an aspect to the world"""
         aspect._world = self
@@ -272,7 +290,7 @@ class World:
         self._aspects.sort(key=lambda x: x.priority, reverse=True)
         # print("DEBUG: Aspect sorting", [x.priority for x in self._aspects])
         # print(self._aspects)
-    
+
     def get_aspect(self, aspect_class):
         """Get an aspect"""
         for i in self._aspects:
@@ -289,21 +307,25 @@ class World:
 
     def update(self):
         """Update the world"""
+        # == update chunks
         for i in self._active_chunks:
             self._chunks[i].update()
         # for i in self._chunks.values():
         #     i.update()
-        # update aspects
+        # == update aspects
         for aspect in self._aspects:
             aspect.handle()
         # TODO - do I want to stick with this??? 
         # keep chunks --> they update entities!
+        
+        # == initialize new entities
+        self._ehandler.initialize_entities_at_end_of_update()
 
     def handle_aspects(self):
         """Handle the aspects"""
         for i in self._aspects:
             i.handle()
-        
+
     def handle_aspect_timed(self) -> list:
         """Handle the aspects"""
         for i in self._aspects:
@@ -321,6 +343,7 @@ class World:
     def clear_cache(self):
         """Clear the cache"""
         self._components.clear()
+
 
 # ------------------------------ #
 # scene
@@ -353,9 +376,9 @@ class Scene:
 
     def update(self):
         """Update a scene"""
+        # update layers
         for layer in self._layers:
             layer.update()
-
 
 # ------------------------------ #
 

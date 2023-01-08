@@ -119,12 +119,13 @@ scene.SceneHandler.push_scene(sc)
 # game loop
 SORA.start_engine_time()
 while SORA.RUNNING:
-    SORA.FRAMEBUFFER.fill((255, 255, 255, 255))
+    # SORA.FRAMEBUFFER.fill((255, 255, 255, 255))
+    SORA.FRAMEBUFFER.fill((0, 0, 0, 255))
     # pygame update + render
+    registry.update()
     scene.SceneHandler.update()
 
 
-    # registry.update()
     # pygame.draw.rect(SORA.FRAMEBUFFER, (0, 0, 255), pygame.Rect((200, 120), registry.get_frame().get_size()))
     # SORA.FRAMEBUFFER.blit(registry.get_frame(), (200, 120))
 

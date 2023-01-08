@@ -29,13 +29,8 @@ class MissingComponent(Exception):
 # ------------------------------ #
 # movement 
 class MovementComponent(scene.Component):
-    def __init__(self, velocity: float = 0.0, direction: float = 0.0):
+    def __init__(self):
         super().__init__()
-        self.velocity = velocity
-        self.direction = direction
-        # print("in movement class")
-        # print(self.__class__.__name__)
-        # print(hash(self))
 
 # aspect
 class MovementAspect(scene.Aspect):
@@ -48,15 +43,12 @@ class MovementAspect(scene.Aspect):
         """Handle movement for entities"""
         for e in self.iterate_entities():
             # just move entities first
-            comp = e.get_component_from_hash(self._target)
+            # comp = e.get_component_from_hash(self._target)
             # handle movement
-            e.position.x += comp.velocity * math.cos(comp.direction)
-            e.position.y += comp.velocity * math.sin(comp.direction)
+            e.position += e.velocity * engine.SoraContext.DELTA
             # push object towards position
             e.rect.center = e.position.xy
             # print(e.rect)
-
-
 
             # handle if leaving chunk
             cx = e.rect.centerx // e.world._options["chunkpixw"]
@@ -172,7 +164,7 @@ class SpriteRendererAspectDebug(scene.Aspect):
         for e in self.iterate_entities():
             # get the sprite
             c_sprite = e.get_component(SpriteRenderer)._sprite
-            if not c_sprite.sprite: continue
+            if not c_sprite or not c_sprite.sprite: continue
             # get the position
             pos = e.position.xy
             # render the sprite
@@ -187,18 +179,17 @@ class Collision2DComponent(scene.Component):
 
     TARGETS = [physics.AABB, physics.Box2D]
 
-    def __init__(self, width: int, height: int, angle: float = 0, mass: float = 10, hardness: float = 1.0, offset: list = None):
+    def __init__(self, mass: float = 10, hardness: float = 1.0, offset: list = None):
         super().__init__()
-        self.width = width
-        self.height = height
-        self.angle = angle
         self._offset = pgmath.Vector2(offset) if offset else pgmath.Vector2(0, 0)
         # other arguments
         self._mass = mass
-        self._area = self.width * self.height
-        self._density = self._area / self._mass
+        self._area = 0
+        self._density = 0
         self._hardness = hardness
         self._shape = None
+        # private
+
 
     def on_add(self):
         """On add"""
@@ -206,7 +197,11 @@ class Collision2DComponent(scene.Component):
             if self._entity.entity_has_component(t):
                 self._shape = self._entity.get_component(t)
                 break
+        if not self._shape:
+            raise MissingShape("Shape is not an added component to: ", self._entity)
         # print(self._shape)
+        self._area = self._shape._rect.w * self._shape._rect.h
+        self._density = self._area / self._mass
 
     @property
     def area(self):
@@ -246,22 +241,57 @@ class Collision2DAspect(scene.Aspect):
         # private
         self._collisions = []
     
-    def has_collision(self, e1, e2):
+    def handle_collision_check(self, a, b):
         """Check if there are collisions"""
-        pass
+        # print(a, b)
+        ac = a.get_component(Collision2DComponent)
+        bc = b.get_component(Collision2DComponent)
+        acol = ac._shape
+        bcol = bc._shape
+        # grab the collision components
+        if physics.check_overlap(acol, bcol, physics.RIGHT) and physics.check_overlap(acol, bcol, physics.UP):
+            col = physics.Collision(acol, bcol)
+            self._collisions.append(col)
+            # print(hash(col))
+            # print(acol._rect, bcol._rect)
 
     def handle(self):
         """Handle Collisions for Collision2D Components"""
         # consider chunking
-        
-        pass
+        for e1 in self.iterate_entities():
+            for e2 in self.iterate_entities():
+                if e1 == e2: continue
+                # handle collision checking
+                self.handle_collision_check(e1, e2)
+        # handle collisions
+        print(len(self._collisions))
+        self._collisions.clear()
+
+        # TODO: create a collision object:
+        # id = sum of the entity id's
+        #       makes sure that duplicates are not existent
+        # then collisions contain the two "shapes" that collided
+        # and then we can handle it!
+        """
+        Loop through all collisions
+        - cache the checked collisions
+        - because we know that there may be duplicate!
+        - we don't know when duplicates will appear, so cache!
+        - check!
+        - use a set!!! hash the collision system --> sorting? lower id value is first?? 
+        - or we can add id's together and then sort by that
+        - or take entity number or smth (then we gotta add in counting for ehandler)
+        - hash that (bit shifting) then do some check with that
+        """
+
 
 # ------------------------------ #
 # handling collision
 
-class Collision2DHandler:
+class Collision2DHandler(scene.Aspect):
     def __init__(self):
-        super().__init__(0)
+        super().__init__()
+        self.priority = 4
         self._collision2d_aspect = None
     
     def on_add(self):
@@ -273,6 +303,25 @@ class Collision2DHandler:
     def handle(self):
         # perform collisions!
         pass
+
+# ------------------------------ #
+# debug render collision areas
+
+class Collision2DRendererAspectDebug(scene.Aspect):
+    def __init__(self):
+        super().__init__(Collision2DComponent)
+        self.priority = 0
+
+    def handle(self):
+        """Handle Collisions for Collision2D Components"""
+        # consider chunking
+        for e in self._world.iter_active_entities():
+            if not e.entity_has_component(Collision2DComponent): continue
+            # grab the collision components
+            c = e.get_component(Collision2DComponent)
+            pos = c.get_relative_position()
+            # draw the collision area
+            pgdraw.rect(engine.SoraContext.FRAMEBUFFER, (255, 0, 0), pgRect(pos - (c._shape._rect.w/2, c._shape._rect.h/2), (c._shape._rect.w, c._shape._rect.h)), 1)
 
 
 # ------------------------------------------------------------ #
@@ -288,9 +337,9 @@ def create_square_particle(parent, **kwargs):
     return [parent.position.xy, 
             kwargs["vel"] if "vel" in kwargs else pgmath.Vector2((random.random()-0.5)*100, (random.random()-0.5)*100),
             0, # angle,
-            kwargs["angv"] if "angv" in kwargs else random.random() * 100,
+            kwargs["angv"] if "angv" in kwargs else (random.random()-0.5) * 100,
             list(kwargs["color"]) if "color" in kwargs else [0, 0, 255],
-            kwargs["life"] if "life" in kwargs else 1.0,
+            kwargs["life"] if "life" in kwargs else 10.0,
             (physics.RIGHT * r, physics.UP * r, physics.LEFT * r, physics.DOWN * r), # points
             parent.get_new_particle_id()]
 
@@ -303,9 +352,9 @@ def update_square_particle(parent, particle):
         parent.remove_particle(particle)
         return
     # set color value
-    # particle[4][0] = int(math.sin(engine.SoraContext.ENGINE_UPTIME) * 127 + 127)
-    # particle[4][1] = int(math.cos(engine.SoraContext.ENGINE_UPTIME) * 127 + 127)
-    # particle[4][2] = int(math.sin(particle[0].x) * 127 + 127)
+    particle[4][0] = int(math.sin(engine.SoraContext.ENGINE_UPTIME) * 127 + 127)
+    particle[4][1] = int(math.cos(engine.SoraContext.ENGINE_UPTIME) * 127 + 127)
+    particle[4][2] = int(math.sin(particle[0].x) * 127 + 127)
     # just spin + move in random direction
     particle[0] += particle[1] * engine.SoraContext.DELTA
     particle[2] += particle[3] * engine.SoraContext.DELTA
@@ -327,9 +376,9 @@ def create_triangle_particle(parent, **kwargs):
     return [parent.position.xy, 
             kwargs["vel"] if "vel" in kwargs else pgmath.Vector2((random.random()-0.5)*100, (random.random()-0.5)*100),
             0, # angle,
-            kwargs["angv"] if "angv" in kwargs else random.random() * 1000,
+            kwargs["angv"] if "angv" in kwargs else (random.random()-0.5) * 1000,
             list(kwargs["color"]) if "color" in kwargs else [0, 0, 255],
-            kwargs["life"] if "life" in kwargs else 1.0,
+            kwargs["life"] if "life" in kwargs else 10.0,
             (physics.RIGHT * r, physics.RIGHT.rotate(120) * r, physics.RIGHT.rotate(240) * r), # points
             parent.get_new_particle_id()]
 

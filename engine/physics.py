@@ -2,6 +2,7 @@ print("Activating physics.py")
 
 import engine
 import random
+import math
 
 from engine import scene
 from pygame import Rect as pRect
@@ -39,9 +40,14 @@ class Entity:
         # public
         self.c_chunk = [0, 0]
         self.position = pgmath.Vector2()
+        self.velocity = pgmath.Vector2()
         self.rect = pRect(0, 0, 0, 0)
 
     # whenever components are added -- the world must be queried --> so that cache can be updated
+    def on_ready(self):
+        """When Entity is ready -- called at end of every update loop by world -- if new entity"""
+        # print(self)
+        pass
 
     @property
     def components(self) -> dict:
@@ -80,6 +86,32 @@ class Entity:
         """Kill the entity"""
         self._alive = False
 
+    def __eq__(self, o):
+        """Overload the == operator"""
+        return id(self) == id(o)
+
+# ------------------------------------------------------------ #
+# collision data
+# ------------------------------------------------------------ #
+
+class Collision:
+    def __init__(self, entity1, entity2):
+        # private
+        self._id_sum = id(entity1) + id(entity2)
+        # self._id_sum = 0
+
+        # public
+        self.entity1 = entity1
+        self.entity2 = entity2
+        # the rest of the data is to be calculated
+        # TODO: 
+        # self.normal = ?
+        # self.penetration = ?
+    
+    def __hash__(self):
+        """Overload the 'id' operator"""
+        return self._id_sum
+
 # ------------------------------------------------------------ #
 # collision objects
 # ------------------------------------------------------------ #
@@ -88,6 +120,13 @@ class CollisionShape(scene.Component):
     COLLISIONSHAPE = True
     def __init__(self):
         super().__init__()
+    
+    def iterate_vertices(self):
+        yield (0, 0)
+    
+    def get_vertices(self):
+        """Get the vertices of the box"""
+        return list(self.iterate_vertices())
 
 
 class AABB(CollisionShape):
@@ -100,10 +139,11 @@ class AABB(CollisionShape):
     
     def iterate_vertices(self):
         """Iterator for vertices"""
-        yield self._entity.position + self.rect.topleft
-        yield self._entity.position + self.rect.topright
-        yield self._entity.position + self.rect.bottomleft
-        yield self._entity.position + self.rect.bottomright
+        yield self._entity.position + self._rect.topleft
+        yield self._entity.position + self._rect.topright
+        yield self._entity.position + self._rect.bottomleft
+        yield self._entity.position + self._rect.bottomright
+
 
 class Box2D(CollisionShape):
     """
@@ -138,19 +178,20 @@ class Box2D(CollisionShape):
     def iterate_vertices(self):
         """Iterator for rotated vertices"""
         # get the center of the rectangle
-        center = pgmath.Vector2(self.rect.centerx, self.rect.centery)
+        center = pgmath.Vector2(self._rect.centerx, self._rect.centery)
 
         # get the vertices
         vertices = [
-            pgmath.Vector2(self.rect.topleft) - center,
-            pgmath.Vector2(self.rect.topright) - center,
-            pgmath.Vector2(self.rect.bottomleft) - center,
-            pgmath.Vector2(self.rect.bottomright) - center
+            pgmath.Vector2(self._rect.topleft) - center,
+            pgmath.Vector2(self._rect.topright) - center,
+            pgmath.Vector2(self._rect.bottomleft) - center,
+            pgmath.Vector2(self._rect.bottomright) - center
         ]
 
         # rotate each vertex around the center
         for vertex in vertices:
             yield vertex.rotate(self._angle) + self._entity.position
+
 
 # ------------------------------------------------------------ #
 # SAT helper functions
@@ -177,8 +218,12 @@ def register_interval_function(comp_class, func):
 def interval_aabb(comp, axis):
     """Get the interval of an AABB"""    
     result = pgmath.Vector2(0, 0)
-
-    for point in comp.iterate_vertices():
+    # axis.rotate_ip(90)
+    points = comp.get_vertices()
+    result.x = axis.dot(points[0])
+    result.y = result.x
+    for point in points[1:]:
+        # ang = axis.angle_to(point)
         projection = axis.dot(point)
         if projection < result.x:
             result.x = projection
@@ -200,6 +245,7 @@ def interval_aabb(comp, axis):
 #             result.y = projection
 #     return result
 
+
 # ------------------------------ #
 # register!
 
@@ -212,17 +258,26 @@ register_interval_function(Box2D, interval_aabb) # inteval_box2d
 
 OVERLAP_FUNC = {}
 
+def check_overlap(a, b, axis):
+    """Check if two objects overlap on an axis"""
+    # print(OVERLAP_FUNC)
+    return OVERLAP_FUNC[(hash(a.__class__), hash(b.__class__))](a, b, axis)
+
+
 def register_overlap_function(comp_class_a, comp_class_b, func):
     """Register an overlap function"""
-    OVERLAP_FUNC[(hash(comp_class_a.__class__), hash(comp_class_b.__class__))] = func
-    OVERLAP_FUNC[(hash(comp_class_b.__class__), hash(comp_class_a.__class__))] = func
+    OVERLAP_FUNC[(hash(comp_class_a), hash(comp_class_b))] = func
+    OVERLAP_FUNC[(hash(comp_class_b), hash(comp_class_a))] = func
 
+# ------------------------------ #
+# overlap functions
 
 def overlap_AABBtoAABB(a, b, axis):
     """Check if two objects overlap on an axis"""
     # project points onto an axis then compare
     i1 = get_interval(a, axis)
     i2 = get_interval(b, axis)
+    # print(id(a), id(b), i1, i2, end=" | ")
     return i1.x <= i2.y and i2.x <= i1.y
 
 # def overlap_AABBtoBox2D(a, b, axis):
@@ -246,6 +301,37 @@ def overlap_AABBtoAABB(a, b, axis):
 register_overlap_function(AABB, AABB, overlap_AABBtoAABB)
 register_overlap_function(AABB, Box2D, overlap_AABBtoAABB)
 register_overlap_function(Box2D, Box2D, overlap_AABBtoAABB)
+
+
+# ------------------------------------------------------------ #
+# handle collisions
+# ------------------------------------------------------------ #
+
+HANDLE_FUNC = {}
+
+def register_handle_function(comp_class_a, comp_class_b, func):
+    """Register a collision function"""
+    HANDLE_FUNC[(hash(comp_class_a.__class__), hash(comp_class_b.__class__))] = func
+
+
+def handle_AABBtoAABB(a, b):
+    """Handle a collision between two AABBs"""
+    # get the center of the collision
+    center = (a.position + b.position) / 2
+
+    # get the distance between the two objects
+    distance = a.position - b.position
+
+    # get the minimum translation vector
+    mtv = pgmath.Vector2(0, 0)
+    if abs(distance.x) < abs(distance.y):
+        mtv.x = distance.x
+    else:
+        mtv.y = distance.y
+
+    # move the objects
+    a.position -= mtv / 2
+    b.position += mtv / 2
 
 
 # ------------------------------------------------------------ #

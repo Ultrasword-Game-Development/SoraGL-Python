@@ -217,6 +217,10 @@ class SoraContext:
     # hardware data -- input [keyboard]
     KEYBOARD_KEYS = {}
     KEYBOARD_PRESSED = set()
+
+    # ensure that the error does not occur
+    for i in range(0, 3000):
+        KEYBOARD_KEYS[i] = False
     
     @classmethod
     def update_keyboard_down(cls, event):

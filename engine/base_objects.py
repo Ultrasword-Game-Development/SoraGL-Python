@@ -190,7 +190,6 @@ class Collision2DComponent(scene.Component):
         self._shape = None
         # private
 
-
     def on_add(self):
         """On add"""
         for t in Collision2DComponent.TARGETS:
@@ -229,7 +228,7 @@ class Collision2DComponent(scene.Component):
         pos = self.get_relative_position()
         other_pos = other.get_relative_position()
         # using SAT for AABB collision
-        
+
 
 # https://github.com/codingminecraft/MarioYoutube/blob/265780291acc7693816ff2723c227ae89a171466/src/main/java/physics2d/rigidbody/IntersectionDetector2D.java
 

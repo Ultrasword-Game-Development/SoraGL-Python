@@ -28,6 +28,8 @@ GRAVITY = DOWN * 9.8
 # ------------------------------------------------------------ #
 
 class Entity:
+    ENTITY_COUNT = 0
+
     def __init__(self):
         # defined after register
         self.world = None
@@ -36,6 +38,8 @@ class Entity:
         # private
         self._components = {}
         self._alive = True
+        Entity.ENTITY_COUNT += 1
+        self._entity_id = Entity.ENTITY_COUNT
 
         # public
         self.c_chunk = [0, 0]
@@ -75,7 +79,6 @@ class Entity:
 
     def update(self):
         """Default update function"""
-        # print(id(self))
         pass
     
     def entity_has_component(self, comp_class):
@@ -89,6 +92,11 @@ class Entity:
     def __eq__(self, o):
         """Overload the == operator"""
         return id(self) == id(o)
+    
+    def __hash__(self):
+        """Overload the hash operator"""
+        return self._entity_id
+
 
 # ------------------------------------------------------------ #
 # collision data
@@ -97,8 +105,8 @@ class Entity:
 class Collision:
     def __init__(self, entity1, entity2):
         # private
-        self._id_sum = id(entity1) + id(entity2)
-        # self._id_sum = 0
+        h1, h2 = hash(entity1), hash(entity2)
+        self._id_sum = min(h1, h2) << 16 + max(h1, h2)
 
         # public
         self.entity1 = entity1
@@ -107,10 +115,11 @@ class Collision:
         # TODO: 
         # self.normal = ?
         # self.penetration = ?
-    
+
     def __hash__(self):
         """Overload the 'id' operator"""
         return self._id_sum
+
 
 # ------------------------------------------------------------ #
 # collision objects
@@ -355,7 +364,7 @@ class ParticleHandler(Entity):
         """Register a create function"""
         cls.CREATE[name] = func
 
-    @classmethod    
+    @classmethod
     def register_update_function(cls, name, func):
         """Register an update function"""
         cls.UPDATE[name] = func

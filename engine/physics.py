@@ -106,7 +106,7 @@ class Collision:
     def __init__(self, entity1, entity2):
         # private
         h1, h2 = hash(entity1), hash(entity2)
-        self._id_sum = min(h1, h2) << 16 + max(h1, h2)
+        self._id_sum = (min(h1, h2) << 16) + max(h1, h2)
 
         # public
         self.entity1 = entity1
@@ -477,7 +477,7 @@ def _default_timer(parent):
     """Default timer function for particles"""
     parent._timer += engine.SoraContext.DELTA
     if parent._timer >= parent._data["interval"]:
-        print(parent._function_data)
+        # print(parent._function_data)
         parent._timer = 0
         particle = parent.create_func(parent, **parent.args)
         # print("created particle")

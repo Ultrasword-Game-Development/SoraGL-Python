@@ -74,7 +74,7 @@ class Sprite(scene.Component):
         self.width = width
         self.height = height
         if width < 0 or height < 0:
-            raise ValueError("Width and height must be greater than 0!")
+            raise ValueError("Width and height must be >= 0!")
         elif width == 0 or height == 0:
             self._sprite = sprite
             self.width, self.height = self._sprite.get_size()
@@ -82,6 +82,7 @@ class Sprite(scene.Component):
             self._sprite = engine.SoraContext.scale_image(sprite, (width, height)) if sprite else sprite
         self.hwidth = self.width // 2
         self.hheight = self.height // 2
+        print(self.width, self.height, self._sprite)
 
     @property
     def sprite(self):
@@ -116,6 +117,16 @@ class AnimatedSprite(Sprite):
     def sprite(self):
         """Get the sprite"""
         return self._registry.get_frame()
+    
+    @property
+    def registry(self):
+        """Get the registry"""
+        return self._registry
+    
+    @registry.setter
+    def registry(self, new):
+        """Set a new registry"""
+        self._registry = new
 
     @property
     def area(self):
@@ -136,6 +147,7 @@ class SpriteRenderer(scene.Component):
         self._sprite = self._entity.get_component(Sprite)
         if not self._sprite:
             self._sprite = self._entity.get_component(AnimatedSprite)
+        # print(self._sprite)
 
 # aspect
 class SpriteRendererAspect(scene.Aspect):
@@ -164,12 +176,12 @@ class SpriteRendererAspectDebug(scene.Aspect):
         for e in self.iterate_entities():
             # get the sprite
             c_sprite = e.get_component(SpriteRenderer)._sprite
+            # print(c_sprite)
             if not c_sprite or not c_sprite.sprite: continue
-            # get the position
-            pos = e.position.xy
+            # print(c_sprite)
             # render the sprite
-            engine.SoraContext.FRAMEBUFFER.blit(c_sprite.sprite, pos - (c_sprite.hwidth, c_sprite.hheight))
-            pgdraw.rect(engine.SoraContext.FRAMEBUFFER, (0, 0, 255), pgRect(pos - (c_sprite.hwidth, c_sprite.hheight), c_sprite.sprite.get_size()), 1)
+            engine.SoraContext.FRAMEBUFFER.blit(c_sprite.sprite, e.position - (c_sprite.hwidth, c_sprite.hheight))
+            pgdraw.rect(engine.SoraContext.FRAMEBUFFER, (0, 0, 255), pgRect(e.position - (c_sprite.hwidth, c_sprite.hheight), c_sprite.sprite.get_size()), 1)
 
 # ------------------------------ #
 # collision2d

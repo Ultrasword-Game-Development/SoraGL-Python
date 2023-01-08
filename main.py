@@ -42,6 +42,12 @@ vattrib.add_attribute('2f', 'vuv')
 vattrib.create_structure(vertices, indices)
 
 
+# ------------------------------ #
+
+from scripts.entities import tomato
+
+# ------------------------------ #
+
 """
 TODO:
 4. cleaning up buffers --> releasing all gl context data
@@ -56,6 +62,7 @@ registry = animation.Category.get_category_framedata("assets/sprites/tomato.json
 
 
 image = SORA.load_image("assets/sprites/tomato.png")
+potato = SORA.load_image("assets/sprites/potato-2.png")
 __ss = animation.SpriteSheet(SORA.load_image("assets/sprites/stages.png"), 16, 16, 0, 0)
 
 sc = scene.Scene(config=scene.load_config(scene.Scene.DEFAULT_CONFIG))
@@ -73,7 +80,7 @@ sce3particle.position += (100, 100)
 
 sce4particle = physics.ParticleHandler(create_func="square", update_func="square")
 sce4particle.position += (200, 100)
-sce4particle["inverval"] = 0.5
+sce4particle["interval"] = 0.5
 
 # sce5particle = physics.ParticleHandler(create_func="triangle", update_func="triangle")
 sce5particle = physics.ParticleHandler(create_func="custom", update_func="custom")
@@ -86,17 +93,19 @@ scw.add_entity(sce2)
 scw.add_entity(sce3particle)
 scw.add_entity(sce4particle)
 scw.add_entity(sce5particle)
+scw.add_entity(tomato.Tomato(position=(100, 100)))
 
 
 # entity comp
 sce1.add_component(base_objects.MovementComponent())
-sce1.add_component(base_objects.Sprite(0, 0, image))
+sce1.add_component(base_objects.Sprite(0, 0, potato))
 sce1.add_component(base_objects.SpriteRenderer())
 sce1.position += (100, 100)
 
 sce2.add_component(base_objects.MovementComponent())
 sce2.add_component(base_objects.AnimatedSprite(0, 0, registry))
 sce2.add_component(base_objects.SpriteRenderer())
+sce2.position += (200, 100)
 
 
 # physics
@@ -112,8 +121,11 @@ scw.add_aspect(base_objects.MovementAspect())
 scw.add_aspect(base_objects.Collision2DAspect())
 # scw.add_aspect(base_objects.SpriteRendererAspect())
 scw.add_aspect(base_objects.SpriteRendererAspectDebug())
+scw.add_aspect(base_objects.Collision2DRendererAspectDebug())
 
 scene.SceneHandler.push_scene(sc)
+
+print(scw._components)
 
 
 # ------------------------------ #

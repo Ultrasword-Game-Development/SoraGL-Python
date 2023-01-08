@@ -70,16 +70,17 @@ class EntityHandler:
         """Register the entity"""
         entity.handler = self
         entity.world = self._world
+        # store entity in ehandler
         self._entities[hash(entity)] = entity
         self._new_entities.add(hash(entity))
     
     def get_entity(self, entity):
         """Get the entity"""
-        return self._entities[eid]
+        return self._entities[hash(entity)]
     
     def remove_entity(self, entity):
         """Remove the entity"""
-        del self._entities[eid]
+        del self._entities[hash(entity)]
 
     def clear(self):
         """Clear the entity handler"""
@@ -139,6 +140,7 @@ class Aspect:
 
     def iterate_entities(self):
         """Iterate through the entities"""
+        # print(self._world._components[self._target])
         for entity in self._world._components[self._target]:
             yield self._world._ehandler._entities[entity]
 
@@ -151,8 +153,8 @@ class ComponentHandler:
     @classmethod
     def register_component(cls, comp):
         """Register the component"""
-        if hash(comp) not in cls.COMPONENTS:
-            cls.COMPONENTS[hash(comp)] = comp.__class__
+        if comp.__class__.__name__ not in cls.COMPONENTS:
+            cls.COMPONENTS[comp.__class__.__name__] = comp.__class__
 
 
 class Component:
@@ -163,10 +165,7 @@ class Component:
         
         # public
         ComponentHandler.register_component(self)
-        self.HASH = loaded_hash if loaded_hash != None else hash(self)
-        # print('component base class')
-        # print(self.HASH)
-        # print(hash(self))
+        self.HASH = loaded_hash if loaded_hash != None else hash(self.__class__)
     
     def on_add(self):
         """When an added to an Entity"""
@@ -174,7 +173,7 @@ class Component:
 
     def __hash__(self):
         """Hash the component"""
-        return hash(self.__class__.__name__)
+        return hash(self.__class__)
     
     def get_hash(self):
         """Get the pre-loaded hash"""
@@ -247,27 +246,30 @@ class World:
         for comp in entity.components:
             self.add_component(entity, comp)
         # add to chunk
-        self.get_chunk(0, 0)._intrinstic_entities.add(id(entity))
+        self.get_chunk(0, 0)._intrinstic_entities.add(hash(entity))
 
     def update_entity_chunk(self, entity, old, new):
         """Update the chunk intrinsic properties for entities"""
         ochunk = self.get_chunk(old[0], old[1])
         nchunk = self.get_chunk(new[0], new[1])
-        ochunk._intrinstic_entities.remove(id(entity))
-        nchunk._intrinstic_entities.add(id(entity))
+        ochunk._intrinstic_entities.remove(hash(entity))
+        nchunk._intrinstic_entities.add(hash(entity))
         entity.c_chunk[0], entity.c_chunk[1] = new
 
     def add_component(self, entity, component):
         """Add a component to an entity in the world"""
-        comp_hash = hash(component.__class__)
+        comp_hash = hash(component)
+        # print(component.__class__.__name__, comp_hash)
         if comp_hash not in self._components:
             self._components[comp_hash] = set()
         self._components[comp_hash].add(hash(entity))
         # add to entity
         entity._components[comp_hash] = component
+        # component parent = entity
         component._entity = entity
         component.on_add()
-
+        # print(self._components)
+        
     def remove_component(self, entity, comp_class):
         """Remove a component from an entity"""
         if comp_class.get_hash() in self._components:
@@ -292,7 +294,7 @@ class World:
         # print("DEBUG: Aspect sorting", [x.priority for x in self._aspects])
         # print(self._aspects)
         # cache the components
-        self._components[aspect._target] = set()
+        # self._components[aspect._target] = set()
 
     def get_aspect(self, aspect_class):
         """Get an aspect"""

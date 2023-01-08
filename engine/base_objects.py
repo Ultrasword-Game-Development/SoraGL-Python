@@ -264,7 +264,7 @@ class Collision2DAspect(scene.Aspect):
                 # handle collision checking
                 self.handle_collision_check(e1, e2)
         # handle collisions
-        print(len(self._collisions))
+        # print(len(self._collisions))
         self._collisions.clear()
 
         # TODO: create a collision object:
@@ -283,6 +283,7 @@ class Collision2DAspect(scene.Aspect):
         - or take entity number or smth (then we gotta add in counting for ehandler)
         - hash that (bit shifting) then do some check with that
         """
+        
 
 
 # ------------------------------ #
@@ -339,7 +340,7 @@ def create_square_particle(parent, **kwargs):
             0, # angle,
             kwargs["angv"] if "angv" in kwargs else (random.random()-0.5) * 100,
             list(kwargs["color"]) if "color" in kwargs else [0, 0, 255],
-            kwargs["life"] if "life" in kwargs else 10.0,
+            kwargs["life"] if "life" in kwargs else 1.0,
             (physics.RIGHT * r, physics.UP * r, physics.LEFT * r, physics.DOWN * r), # points
             parent.get_new_particle_id()]
 
@@ -378,7 +379,7 @@ def create_triangle_particle(parent, **kwargs):
             0, # angle,
             kwargs["angv"] if "angv" in kwargs else (random.random()-0.5) * 1000,
             list(kwargs["color"]) if "color" in kwargs else [0, 0, 255],
-            kwargs["life"] if "life" in kwargs else 10.0,
+            kwargs["life"] if "life" in kwargs else 1.0,
             (physics.RIGHT * r, physics.RIGHT.rotate(120) * r, physics.RIGHT.rotate(240) * r), # points
             parent.get_new_particle_id()]
 
@@ -406,4 +407,75 @@ def update_triangle_particle(parent, particle):
 physics.ParticleHandler.register_create_function("triangle", create_triangle_particle)
 physics.ParticleHandler.register_update_function("triangle", update_triangle_particle)
 
+# ------------------------------ #
+# triangle particles
+
+__custom_shape = [
+    pgmath.Vector2(0, -1),
+    pgmath.Vector2(1, 0),
+    pgmath.Vector2(0.9, 0.15),
+    pgmath.Vector2(0.8, 0.4),
+    pgmath.Vector2(0.6, 0.7),
+    pgmath.Vector2(0.5, 0.65),
+    pgmath.Vector2(0.4, 0.5),
+    pgmath.Vector2(0.2, 0.4),
+    pgmath.Vector2(0, 0),
+
+    pgmath.Vector2(-0.2, 0.4),
+    pgmath.Vector2(-0.4, 0.5),
+    pgmath.Vector2(-0.5, 0.65),
+    pgmath.Vector2(-0.6, 0.7),
+    pgmath.Vector2(-0.8, 0.4),
+    pgmath.Vector2(-0.9, 0.15),
+    pgmath.Vector2(-1, 0)
+
+]
+
+
+def create_custom_particle(parent, **kwargs):
+    """Create a square particle"""
+    r = kwargs["radius"] if "radius" in kwargs else 10
+    return [parent.position.xy, 
+            kwargs["vel"] if "vel" in kwargs else pgmath.Vector2((random.random()-0.5)*100, (random.random()-0.5)*100),
+            0, # angle,
+            kwargs["angv"] if "angv" in kwargs else (random.random()-0.5) * 1000,
+            list(kwargs["color"]) if "color" in kwargs else [255, 192, 203],
+            kwargs["life"] if "life" in kwargs else 1.0,
+            tuple([_ * r for _ in __custom_shape]), # points
+            parent.get_new_particle_id()]
+
+
+def update_custom_particle(parent, particle):
+    """Update a square particle"""
+    # check if the particle is dead
+    particle[5] -= engine.SoraContext.DELTA
+    # print(particle)
+    if particle[5] <= 0:
+        parent.remove_particle(particle)
+        return
+    # set color value
+    particle[4][0] = 255 - abs(int(math.sin(particle[0].y) * 100))
+    particle[4][1] = abs(int(math.cos(engine.SoraContext.ENGINE_UPTIME) * 129))
+    particle[4][2] = 200 - abs(int(math.sin(particle[0].x) * 40))
+    # just spin + move in random direction
+    particle[0] += particle[1] * engine.SoraContext.DELTA
+    particle[2] += particle[3] * engine.SoraContext.DELTA
+    # render -- square (that rotates)
+    points = [i.rotate(particle[2]) + particle[0] for i in particle[6]]
+    pgdraw.polygon(engine.SoraContext.FRAMEBUFFER, particle[4], points, 1)
+
+
+# register
+physics.ParticleHandler.register_create_function("custom", create_custom_particle)
+physics.ParticleHandler.register_update_function("custom", update_custom_particle)
+
+
+
+
+
+
+
+
+
 print("More objects to be added! base_objects.py")
+

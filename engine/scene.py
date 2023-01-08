@@ -261,7 +261,7 @@ class World:
         comp_hash = hash(component.__class__)
         if comp_hash not in self._components:
             self._components[comp_hash] = set()
-        self._components[comp_hash].add(id(entity))
+        self._components[comp_hash].add(hash(entity))
         # add to entity
         entity._components[comp_hash] = component
         component._entity = entity
@@ -270,7 +270,7 @@ class World:
     def remove_component(self, entity, comp_class):
         """Remove a component from an entity"""
         if comp_class.get_hash() in self._components:
-            self._components[comp_class.get_hash()].remove(entity)
+            self._components[comp_class.get_hash()].remove(hash(entity))
             entity.components.remove(comp_class.get_hash())
 
     def add_chunk(self, chunk_hash: int, chunk):
@@ -290,6 +290,8 @@ class World:
         self._aspects.sort(key=lambda x: x.priority, reverse=True)
         # print("DEBUG: Aspect sorting", [x.priority for x in self._aspects])
         # print(self._aspects)
+        # cache the components
+        self._components[aspect._target] = set()
 
     def get_aspect(self, aspect_class):
         """Get an aspect"""

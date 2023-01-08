@@ -67,45 +67,23 @@ sce1 = physics.Entity()
 
 sce2 = physics.Entity()
 
-sce3particle = physics.ParticleHandler(create_func=physics.ParticleHandler.DEFAULT_CREATE, 
-                update_func=physics.ParticleHandler.DEFAULT_UPDATE)
+sce3particle = physics.ParticleHandler(create_func="custom", 
+                update_func="custom")
 sce3particle.position += (100, 100)
 
-sce4particle = physics.ParticleHandler(create_func="square", update_func="square")
-sce4particle.position += (200, 100)
+sce4particle = physics.ParticleHandler(create_func="custom", update_func="custom")
+sce4particle.position += (200, 25)
 sce4particle["inverval"] = 0.5
 
 # sce5particle = physics.ParticleHandler(create_func="triangle", update_func="triangle")
 sce5particle = physics.ParticleHandler(create_func="custom", update_func="custom")
 sce5particle.position += (200, 150)
-sce5particle["interval"] = 0.5
+sce5particle["interval"] = 0.1
 
 # add entities to world first
-scw.add_entity(sce1)
-scw.add_entity(sce2)
 scw.add_entity(sce3particle)
 scw.add_entity(sce4particle)
 scw.add_entity(sce5particle)
-
-
-# entity comp
-sce1.add_component(base_objects.MovementComponent())
-sce1.add_component(base_objects.Sprite(0, 0, image))
-sce1.add_component(base_objects.SpriteRenderer())
-sce1.position += (100, 100)
-
-sce2.add_component(base_objects.MovementComponent())
-sce2.add_component(base_objects.AnimatedSprite(0, 0, registry))
-sce2.add_component(base_objects.SpriteRenderer())
-
-
-# physics
-sce1.add_component(physics.AABB(10, 10))
-sce1.add_component(base_objects.Collision2DComponent(10, 10))
-
-sce2.add_component(physics.Box2D(10, 10, degrees=0))
-sce2.add_component(base_objects.Collision2DComponent(10, 10))
-
 
 # aspects
 scw.add_aspect(base_objects.MovementAspect())

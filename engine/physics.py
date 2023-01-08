@@ -373,7 +373,7 @@ class ParticleHandler(Entity):
     @classmethod
     def get_update_function(cls, name):
         """Get an update fucntion"""
-        return cls.UPDATE[name] if name in cls.UPDATE else cls.UDPATE[cls.DEFAULT_UPDATE]
+        return cls.UPDATE[name] if name in cls.UPDATE else cls.UPDATE[cls.DEFAULT_UPDATE]
     
     @classmethod
     def get_create_timer_funcion(cls, name):
@@ -396,6 +396,7 @@ class ParticleHandler(Entity):
         self.args = args
 
         # public
+        self._function_data = [create_func, update_func, create_timer_func]
         self.create_timer_func = ParticleHandler.get_create_timer_funcion(name=create_timer_func)
         self.create_func = ParticleHandler.get_create_function(name=create_func)
         self.update_func = ParticleHandler.get_update_function(name=update_func)
@@ -424,6 +425,7 @@ class ParticleHandler(Entity):
 
     def update(self):
         """Update the Particle Handler"""
+        # print(self._function_data)
         self.create_timer_func(self)
         for particle in self._particles.values():
             self.update_func(self, particle)
@@ -466,6 +468,7 @@ def _default_timer(parent):
     """Default timer function for particles"""
     parent._timer += engine.SoraContext.DELTA
     if parent._timer >= parent._data["interval"]:
+        print(parent._function_data)
         parent._timer = 0
         particle = parent.create_func(parent, **parent.args)
         # print("created particle")

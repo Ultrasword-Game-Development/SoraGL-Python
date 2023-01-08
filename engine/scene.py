@@ -70,20 +70,21 @@ class EntityHandler:
         """Register the entity"""
         entity.handler = self
         entity.world = self._world
-        self._entities[id(entity)] = entity
-        self._new_entities.add(id(entity))
+        self._entities[hash(entity)] = entity
+        self._new_entities.add(hash(entity))
     
-    def get_entity(self, eid):
+    def get_entity(self, entity):
         """Get the entity"""
         return self._entities[eid]
     
-    def remove_entity(self, eid):
+    def remove_entity(self, entity):
         """Remove the entity"""
         del self._entities[eid]
 
     def clear(self):
         """Clear the entity handler"""
         self._entities.clear()
+
 
 # ------------------------------ #
 # scene - chunks
@@ -236,9 +237,9 @@ class World:
             for entity in self._chunks[chunk]._intrinstic_entities:
                 yield self._ehandler._entities[entity]
 
-    def get_entity(self, eid):
+    def get_entity(self, entity):
         """Get the entity"""
-        return self._ehandler._entities[eid]
+        return self._ehandler.get_entity(entity)
 
     def add_entity(self, entity):
         """Add an entity to the world"""

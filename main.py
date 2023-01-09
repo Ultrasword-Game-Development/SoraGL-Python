@@ -125,7 +125,7 @@ scw.add_aspect(base_objects.Collision2DRendererAspectDebug())
 
 scene.SceneHandler.push_scene(sc)
 
-print(scw._components)
+# print(scw._components)
 
 
 # ------------------------------ #

@@ -82,7 +82,7 @@ class Sprite(scene.Component):
             self._sprite = engine.SoraContext.scale_image(sprite, (width, height)) if sprite else sprite
         self.hwidth = self.width // 2
         self.hheight = self.height // 2
-        print(self.width, self.height, self._sprite)
+        # print(self.width, self.height, self._sprite)
 
     @property
     def sprite(self):
@@ -183,11 +183,15 @@ class SpriteRendererAspectDebug(scene.Aspect):
             engine.SoraContext.FRAMEBUFFER.blit(c_sprite.sprite, e.position - (c_sprite.hwidth, c_sprite.hheight))
             pgdraw.rect(engine.SoraContext.FRAMEBUFFER, (0, 0, 255), pgRect(e.position - (c_sprite.hwidth, c_sprite.hheight), c_sprite.sprite.get_size()), 1)
 
+
 # ------------------------------ #
 # collision2d
 class Collision2DComponent(scene.Component):
     # square
-    DEFAULT = {"mass": 10}
+    DEFAULT = {
+        "mass": 10, 
+        "hardness": 1.0, # hardness
+    }
 
     TARGETS = [physics.AABB, physics.Box2D]
 
@@ -234,13 +238,6 @@ class Collision2DComponent(scene.Component):
         """Get the offset"""
         return self._offset
 
-    def is_collided(self, other):
-        """Check if this entity is collided with another entity"""
-        # get the position
-        pos = self.get_relative_position()
-        other_pos = other.get_relative_position()
-        # using SAT for AABB collision
-
 
 # https://github.com/codingminecraft/MarioYoutube/blob/265780291acc7693816ff2723c227ae89a171466/src/main/java/physics2d/rigidbody/IntersectionDetector2D.java
 
@@ -251,6 +248,7 @@ class Collision2DAspect(scene.Aspect):
         self.priority = 10
         # private
         self._collisions = []
+        self._cache = set()
     
     def handle_collision_check(self, a, b):
         """Check if there are collisions"""
@@ -265,6 +263,18 @@ class Collision2DAspect(scene.Aspect):
             self._collisions.append(col)
             # print(hash(col))
             # print(acol._rect, bcol._rect)
+
+    def handle_collision(self, a, b):
+        """Handle the collision"""
+        # get the collision components
+        ac = a.get_component(Collision2DComponent)
+        bc = b.get_component(Collision2DComponent)
+        # handle the collision -- momentum
+        a_p = a.velocity * a._mass
+        b_p = b.velocity * b._mass
+        # calculate final momentum -- determine elasticity
+        # conservation of momentum + energy
+        # TODO: physics 2D collision stuff :D
 
     def handle(self):
         """Handle Collisions for Collision2D Components"""
@@ -294,7 +304,18 @@ class Collision2DAspect(scene.Aspect):
         - or take entity number or smth (then we gotta add in counting for ehandler)
         - hash that (bit shifting) then do some check with that
         """
-        
+        for col in self._collisions:
+            # check if the collision is already in the cache
+            if col in self._cache: 
+                continue
+            # add the collision to the cache
+            self._cache.add(col)
+            # get the entities
+            a, b = col.entity1, col.entity2
+            self.handle_collision(a, b)
+
+
+        self._cache.clear()
 
 
 # ------------------------------ #

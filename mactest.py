@@ -117,8 +117,6 @@ scw.add_aspect(base_objects.Collision2DRendererAspectDebug())
 scene.SceneHandler.push_scene(sc)
 
 
-
-
 # ------------------------------ #
 # game loop
 SORA.start_engine_time()

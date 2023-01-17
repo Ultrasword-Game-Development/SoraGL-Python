@@ -64,7 +64,6 @@ scw.get_chunk(0, 0)
 sc.add_layer(scw, 0)
 
 sce1 = physics.Entity()
-
 sce2 = physics.Entity()
 
 sce3particle = physics.ParticleHandler(create_func="custom", 
@@ -79,6 +78,7 @@ sce4particle["inverval"] = 0.5
 sce5particle = physics.ParticleHandler(create_func="custom", update_func="custom")
 sce5particle.position += (200, 150)
 sce5particle["interval"] = 0.1
+
 
 # add entities to world first
 scw.add_entity(sce3particle)

@@ -291,6 +291,8 @@ class World:
         self._aspects.append(aspect)
         aspect.on_add()
         self._aspects.sort(key=lambda x: x.priority, reverse=True)
+        if aspect._target not in self._components:
+            self._components[aspect._target] = set()
         # print("DEBUG: Aspect sorting", [x.priority for x in self._aspects])
         # print(self._aspects)
         # cache the components

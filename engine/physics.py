@@ -103,7 +103,8 @@ class Entity:
 # ------------------------------------------------------------ #
 
 class Collision:
-    def __init__(self, entity1, entity2):
+    def __init__(self, ec1, ec2):
+        entity1, entity2 = ec1._entity, ec2._entity
         # private
         h1, h2 = hash(entity1), hash(entity2)
         self._id_sum = (min(h1, h2) << 16) + max(h1, h2)
@@ -111,9 +112,13 @@ class Collision:
         # public
         self.entity1 = entity1
         self.entity2 = entity2
+        self.component1 = ec1
+        self.component2 = ec2
         # the rest of the data is to be calculated
         # TODO: 
-        # self.normal = ?
+        self.normal1 = self.entity1.position - self.entity2.position
+        self.normal.normalize_ip()
+        self.normal2 = -self.normal1
         # self.penetration = ?
 
     def __hash__(self):

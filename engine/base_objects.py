@@ -197,6 +197,7 @@ class Collision2DComponent(scene.Component):
 
     def __init__(self, mass: float = 1, hardness: float = 1.0, offset: list = None):
         super().__init__()
+        # private
         self._offset = pgmath.Vector2(offset) if offset else pgmath.Vector2(0, 0)
         # other arguments
         self._mass = mass
@@ -204,7 +205,8 @@ class Collision2DComponent(scene.Component):
         self._density = 0
         self._hardness = hardness
         self._shape = None
-        # private
+        # public 
+        self._force = pgmath.Vector2()
 
     def on_add(self):
         """On add"""
@@ -238,11 +240,41 @@ class Collision2DComponent(scene.Component):
         """Get the offset"""
         return self._offset
 
+    @property
+    def force(self):
+        """Get the force"""
+        return self._force
+
+    def apply_force(self, force: pgmath.Vector2):
+        """Apply a force to the component"""
+        self._force += force
+    
+
 
 # https://github.com/codingminecraft/MarioYoutube/blob/265780291acc7693816ff2723c227ae89a171466/src/main/java/physics2d/rigidbody/IntersectionDetector2D.java
 
 # aspect
 class Collision2DAspect(scene.Aspect):
+
+    FUNCTIONS = {}
+
+    # function system
+    @classmethod
+    def register_collision_handle_function(cls, type1, type2, func):
+        """Register collision handling function"""
+        cls.FUNCTIONS[(hash(type1), hash(type2))] = func
+        cls.FUNCTIONS[(hash(type2), hash(type1))] = func
+
+    @classmethod
+    def get_collision_handle_function(cls, type1, type2):
+        """return a collision handling function - type1/2 shape components"""
+        key = (hash(type1), hash(type2))
+        if key in cls.FUNCTIONS:
+            return cls.FUNCTIONS[key]
+        raise NotImplementedError("Missing function for: ", type1.__class__.__name__, "and", type2.__class__.__name__)
+
+    # ------------------------------ #
+
     def __init__(self):
         super().__init__(Collision2DComponent)
         self.priority = 10
@@ -265,6 +297,27 @@ class Collision2DAspect(scene.Aspect):
             # print(hash(col))
             # print(acol._rect, bcol._rect)
 
+    def handle_collision(self, collision):
+        """Handle the collision"""
+        # calculate final momentum -- determine elasticity
+        # conservation of momentum + energy
+        # TODO: physics 2D collision stuff :D - FOR POLYGONS!!! all shapes???
+        """
+        Find a = axis of collision
+        - then using momentum equation:
+        - since momentum conserved in 'a'
+        - then solve for resulting velocities! in the other axis! (b = perp to a)
+        
+        find the right function to handle collision :D
+        """
+        a, b = collision.entity1, collision.entity2
+        print(a, b)
+        if a.get_component(Collision2DComponent)._shape and b.get_component(Collision2DComponent)._shape:
+            # get and then run the collision handling function
+            Collision2DAspect.get_collision_handle_function(a.get_component(Collision2DComponent)._shape, b.get_component(Collision2DComponent)._shape)(a, b)
+            print("Hi")
+
+
     def handle(self):
         """Handle Collisions for Collision2D Components"""
         # consider chunking
@@ -275,7 +328,7 @@ class Collision2DAspect(scene.Aspect):
                 self.handle_collision_check(e1, e2)
         # handle collisions
         # print(len(self._collisions))
-        self._collisions.clear()
+        # self._collisions.clear()
 
         # TODO: create a collision object:
         # id = sum of the entity id's
@@ -293,6 +346,7 @@ class Collision2DAspect(scene.Aspect):
         - or take entity number or smth (then we gotta add in counting for ehandler)
         - hash that (bit shifting) then do some check with that
         """
+        print(self._collisions)
         for col in self._collisions:
             # check if the collision is already in the cache
             if col in self._cache: 
@@ -300,75 +354,19 @@ class Collision2DAspect(scene.Aspect):
             # add the collision to the cache
             self._cache.add(col)
             # get the entities
-            a, b = col.entity1, col.entity2
-            self.handle_collision(a, b)
+            # a, b = col.entity1, col.entity2
+            self.handle_collision(col)
         
         # TODO: remember to clear the cache each time!!!
         # this is for programmers!
-        # usually cleared in the 'Collision2DHandlerAspect'
 
-# ------------------------------ #
-# handling collision
+        self._cache.clear()
 
-class Collision2DHandlerAspect(scene.Aspect):
-
-    FUNCTIONS = {}
-
-    # function system
-    @classmethod
-    def register_collision_handle_function(cls, type1, type2, func):
-        """Register collision handling function"""
-        cls.FUNCTIONS[(hash(type1), hash(type2))] = func
-        cls.FUNCTIONS[(hash(type2), hash(type1))] = func
-
-    @classmethod
-    def get_collision_handle_function(cls, type1, type2):
-        """return a collision handling function"""
-        key = (hash(type2), hash(type1))
-        if key in cls.FUNCTIONS:
-            return cls.FUNCTIONS[key]
-        raise NotImplementedError("Missing function for: ", type1.__class__.__name__, "and", type2.__class__.__name__)
-
-    # ------------------------------ #
-
-    def __init__(self):
-        super().__init__()
-        self.priority = 4
-        self._collision2d_aspect = None
-    
-    def on_add(self):
-        """On add"""
-        self._collision2d_aspect = self._world.get_aspect(Collision2DAspect)
-        if not self._collision2d_aspect:
-            raise MissingComponent("Collision2DAspect is not an added component")
-        # set the parent
-        self._collision2d_aspect._handler_aspect = self
-    
-    def handle_collision(self, a, b):
-        """Handle the collision"""
-        # calculate final momentum -- determine elasticity
-        # conservation of momentum + energy
-        # TODO: physics 2D collision stuff :D - FOR POLYGONS!!! all shapes???
-        """
-        Find a = axis of collision
-        - then using momentum equation:
-        - since momentum conserved in 'a'
-        - then solve for resulting velocities! in the other axis! (b = perp to a)
-        
-        find the right function to handle collision :D
-        """
-        pass
-    
-    def handle(self):
-        # perform collisions!
-
-        # clear cache
-        self._collision2d_aspect._cache.clear()
 
 
 # add functions for handling collisions between things
 
-def handleAABBAABB(a, b):
+def handleAABBAABB(collision):
     """Handle AABB to AABB collision"""
     # get the collision components
     ac = a.get_component(Collision2DComponent)
@@ -387,7 +385,7 @@ def handleAABBAABB(a, b):
 
 # add box2d as well!
 
-Collision2DHandlerAspect.register_collision_handle_function(physics.AABB, physics.AABB, handleAABBAABB)
+Collision2DAspect.register_collision_handle_function(physics.AABB, physics.AABB, handleAABBAABB)
 
 # ------------------------------ #
 # debug render collision areas

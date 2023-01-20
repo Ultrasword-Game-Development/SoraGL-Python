@@ -154,6 +154,7 @@ class CollisionShape(scene.Component):
         return support
     
     """
+    https://www.toptal.com/game/video-game-physics-part-ii-collision-detection-for-solid-objects
     TODO:
     1. suports
     2. aabb vs aabb / aabb vs box2d

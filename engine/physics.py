@@ -112,12 +112,12 @@ class Collision:
         # public
         self.entity1 = entity1
         self.entity2 = entity2
-        self.component1 = ec1
-        self.component2 = ec2
+        self.shape1 = ec1
+        self.shape2 = ec2
         # the rest of the data is to be calculated
         # TODO: 
         self.normal1 = self.entity1.position - self.entity2.position
-        self.normal.normalize_ip()
+        self.normal1.normalize_ip()
         self.normal2 = -self.normal1
         # self.penetration = ?
 
@@ -141,6 +141,31 @@ class CollisionShape(scene.Component):
     def get_vertices(self):
         """Get the vertices of the box"""
         return list(self.iterate_vertices())
+    
+    def get_support(self, dvec: pgmath.Vector2):
+        """Get the support vector - position"""
+        highest = -1e9
+        support = pgmath.Vector2()
+        for v in self.get_vertices():
+            dot = dvec.dot(v)
+            if dot > highest:
+                highest = dot
+                support = v
+        return support
+    
+    """
+    TODO:
+    1. suports
+    2. aabb vs aabb / aabb vs box2d
+    3. circles + aabb / circles + box2d
+    4. box2d + box2d
+    5. minkowski sums! + differences
+    6. simplexes!
+    7. gjk algorithm!
+    8. penetration stuff
+    9. collision handling / resolving
+    10. ez
+    """
 
 
 class AABB(CollisionShape):

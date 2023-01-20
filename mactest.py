@@ -103,11 +103,12 @@ col1.position += (100, 150)
 col2.add_component(base_objects.MovementComponent())
 col2.add_component(base_objects.Sprite(20, 20, potato))
 col2.add_component(base_objects.SpriteRenderer())
-col2.add_component(physics.Box2D(10, 10, degrees=0))
+# col2.add_component(physics.Box2D(10, 10, degrees=0))
+col2.add_component(physics.AABB(10, 10))
 col2.add_component(base_objects.Collision2DComponent(10, 10))
 col2.position += (200, 150)
 
-# aspects
+# ===== aspects
 scw.add_aspect(base_objects.MovementAspect())
 scw.add_aspect(base_objects.Collision2DAspect())
 # scw.add_aspect(base_objects.SpriteRendererAspect())

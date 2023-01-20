@@ -31,7 +31,8 @@ class Tomato(physics.Entity):
         self.add_component(base_objects.AnimatedSprite(0, 0, self.registry))
         self.add_component(base_objects.SpriteRenderer())
         self.add_component(base_objects.MovementComponent())
-        self.add_component(physics.Box2D(10, 10, degrees=0))
+        # self.add_component(physics.Box2D(10, 10, degrees=0))
+        self.add_component(physics.AABB(10, 10))
         self.add_component(base_objects.Collision2DComponent(16, 16))
 
     def update(self):

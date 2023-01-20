@@ -248,8 +248,6 @@ class Collision2DComponent(scene.Component):
     def apply_force(self, force: pgmath.Vector2):
         """Apply a force to the component"""
         self._force += force
-    
-
 
 # https://github.com/codingminecraft/MarioYoutube/blob/265780291acc7693816ff2723c227ae89a171466/src/main/java/physics2d/rigidbody/IntersectionDetector2D.java
 
@@ -311,12 +309,12 @@ class Collision2DAspect(scene.Aspect):
         find the right function to handle collision :D
         """
         a, b = collision.entity1, collision.entity2
-        print(a, b)
+        # print(a, b)
         if a.get_component(Collision2DComponent)._shape and b.get_component(Collision2DComponent)._shape:
             # get and then run the collision handling function
-            Collision2DAspect.get_collision_handle_function(a.get_component(Collision2DComponent)._shape, b.get_component(Collision2DComponent)._shape)(a, b)
-            print("Hi")
-
+            _a, _b = a.get_component(Collision2DComponent)._shape, b.get_component(Collision2DComponent)._shape
+            # print(_a, _b)
+            Collision2DAspect.get_collision_handle_function(_a, _b)(collision)
 
     def handle(self):
         """Handle Collisions for Collision2D Components"""
@@ -346,7 +344,7 @@ class Collision2DAspect(scene.Aspect):
         - or take entity number or smth (then we gotta add in counting for ehandler)
         - hash that (bit shifting) then do some check with that
         """
-        print(self._collisions)
+        # print(self._collisions)
         for col in self._collisions:
             # check if the collision is already in the cache
             if col in self._cache: 
@@ -366,22 +364,19 @@ class Collision2DAspect(scene.Aspect):
 
 # add functions for handling collisions between things
 
-def handleAABBAABB(collision):
-    """Handle AABB to AABB collision"""
-    # get the collision components
-    ac = a.get_component(Collision2DComponent)
-    bc = b.get_component(Collision2DComponent)
-    # handle the collision -- momentum
-    a_p = a.velocity * ac._mass
-    b_p = b.velocity * bc._mass
-    _as = ac._shape
-    _bs = bc._shape
-    # simple sat kinda
-    # find the perp axis to the system
-    xa = (a.position - b.position).rotate(90)
-    # collision along this axis = momentum in 'xa' conserved
-    # momentum in 'ya' to be found
+def handleAABBBox2D(col):
+    """Handle AABB to Box2D collision"""
+    # conserved in parallel - we have perp as well
     print("finish please")
+
+def handleAABBAABB(col):
+    """Handle AABB to AABB collision"""
+    # just x-axis + y-axis handling --> perhaps rebounding
+    a, b = col.entity1, col.entity2
+    ac, bc = col.shape1, col.shape2
+    
+
+
 
 # add box2d as well!
 

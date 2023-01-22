@@ -1,7 +1,7 @@
 import pygame
-import engine
+import soragl
 
-from engine import animation, physics, scene, misc, base_objects
+from soragl import animation, physics, scene, misc, base_objects
 
 """
 Tomato - Sprite Testing
@@ -42,13 +42,13 @@ class Tomato(physics.Entity):
         self.velocity *= self.LERP
 
         # input handling
-        if engine.SoraContext.is_key_pressed(pygame.K_a):
+        if soragl.SoraContext.is_key_pressed(pygame.K_a):
             self.velocity += physics.LEFT * self.SPEED 
-        if engine.SoraContext.is_key_pressed(pygame.K_d):
+        if soragl.SoraContext.is_key_pressed(pygame.K_d):
             self.velocity += physics.RIGHT * self.SPEED
-        if engine.SoraContext.is_key_pressed(pygame.K_w):
+        if soragl.SoraContext.is_key_pressed(pygame.K_w):
             self.velocity += physics.UP * self.SPEED
-        if engine.SoraContext.is_key_pressed(pygame.K_s):
+        if soragl.SoraContext.is_key_pressed(pygame.K_s):
             self.velocity += physics.DOWN * self.SPEED
         
 

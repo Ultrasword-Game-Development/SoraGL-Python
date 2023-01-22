@@ -1,14 +1,14 @@
 import pygame
-import engine
+import soragl
 import struct
 
 from pygame import draw as pgdraw
 from pygame import math as pgmath
-from engine import animation, scene, physics, base_objects
+from soragl import animation, scene, physics, base_objects
 
 # ------------------------------ #
 # setup
-SORA = engine.SoraContext.initialize({"fps": 30, "window_size": [1280, 720], 
+SORA = soragl.SoraContext.initialize({"fps": 30, "window_size": [1280, 720], 
             "window_flags": pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF, 
             "window_bits": 32, "framebuffer_flags": pygame.SRCALPHA, 
             "framebuffer_size": [1280//3, 720//3], "framebuffer_bits": 32})
@@ -18,8 +18,8 @@ SORA.create_context()
 # ------------------------------ #
 # import gl?
 if SORA.is_flag_active(pygame.OPENGL):
-    from engine import mgl
-    from engine.mgl import ModernGL
+    from soragl import mgl
+    from soragl.mgl import ModernGL
     print('Configured Pygame for OpenGL')
 
 
@@ -130,7 +130,7 @@ scene.SceneHandler.push_scene(sc)
 
 # ------------------------------ #
 # game loop
-SORA.start_engine_time()
+SORA.start_soragl_time()
 while SORA.RUNNING:
     # SORA.FRAMEBUFFER.fill((255, 255, 255, 255))
     SORA.FRAMEBUFFER.fill((0, 0, 0, 255))
@@ -150,7 +150,7 @@ while SORA.RUNNING:
     ModernGL.update_context()
     ModernGL.CTX.clear(ModernGL.CLEARCOLOR[0], ModernGL.CLEARCOLOR[1], ModernGL.CLEARCOLOR[2], ModernGL.CLEARCOLOR[3])
     ModernGL.CTX.enable(mgl.moderngl.BLEND)
-    vattrib.change_uniform("utime", SORA.ENGINE_UPTIME % 10000)
+    vattrib.change_uniform("utime", SORA.soragl_UPTIME % 10000)
     vattrib.change_uniform("framebuffer", mgl.Texture.pg2gltex(SORA.FRAMEBUFFER, "fb"))
 
     # vao.render(mode=mgl.moderngl.TRIANGLES)

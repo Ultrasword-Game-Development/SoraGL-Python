@@ -1,14 +1,14 @@
 import pygame
-import engine
+import soragl
 import struct
 
 from pygame import draw as pgdraw
 from pygame import math as pgmath
-from engine import animation, scene, physics, base_objects
+from soragl import animation, scene, physics, base_objects
 
 # ------------------------------ #
 # setup
-SORA = engine.SoraContext.initialize({"fps": 30, "window_size": [1280, 720], 
+SORA = soragl.SoraContext.initialize({"fps": 30, "window_size": [1280, 720], 
             "window_flags": pygame.RESIZABLE | pygame.DOUBLEBUF, 
             "window_bits": 32, "framebuffer_flags": pygame.SRCALPHA, 
             "framebuffer_size": [1280//3, 720//3], "framebuffer_bits": 32,

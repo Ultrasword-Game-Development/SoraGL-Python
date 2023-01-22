@@ -139,12 +139,23 @@ class Collision:
 
 class CollisionShape(scene.Component):
     COLLISIONSHAPE = True
+
     def __init__(self):
         super().__init__()
     
     def iterate_vertices(self):
         yield (0, 0)
     
+    def iterate_vertices_relative(self):
+        """Iteratore for relative vertices"""
+        for v in self.iterate_vertices():
+            yield self._entity.position + v
+    
+    def iterate_vertices_relative_projected(self):
+        """Iterator for projected relative vertices"""
+        for v in self.iterate_vertices_relative():
+            yield self._entity._projected_position + v
+
     def get_vertices(self):
         """Get the vertices of the box"""
         return list(self.iterate_vertices())
@@ -165,6 +176,32 @@ class CollisionShape(scene.Component):
         lowest = 1e9
         support = pgmath.Vector2()
         for v in self.get_vertices():
+            dot = dvec.dot(v+self._entity.position)
+            if dot < lowest:
+                lowest = dot
+                support = v
+        return support
+
+    def get_projected_vertices(self):
+        """Get the projected vertices of the box"""
+        return [self._entity._projected_position + v for v in self.iterate_vertices()]
+    
+    def get_projected_support(self, dvec: pgmath.Vector2):
+        """Get the projected support vector - position - greatest dis point from an axis"""
+        highest = -1e9
+        support = pgmath.Vector2()
+        for v in self.get_projected_vertices():
+            dot = dvec.dot(v)
+            if dot > highest:
+                highest = dot
+                support = v
+        return support
+    
+    def get_projected_isupport(self, dvec: pgmath.Vector2):
+        """Get the projected reverse support vector - position - lowest dis from an axis"""
+        lowest = 1e9
+        support = pgmath.Vector2()
+        for v in self.get_projected_vertices():
             dot = dvec.dot(v)
             if dot < lowest:
                 lowest = dot
@@ -220,7 +257,6 @@ class ConvexShape(CollisionShape):
             else:
                 s0.append(p)
         print(s0, s1, s2)
-
 
     # https://en.wikipedia.org/wiki/Convex_hull
     # https://en.wikipedia.org/wiki/Quickhull#Pseudocode_for_2D_set_of_points
@@ -337,7 +373,7 @@ def register_interval_function(comp_class, func):
 
 def project_point_to_axis(point, axis):
     """Project a point onto an axis"""
-    return axis.dot(point)
+    return axis.rotate(90).dot(point)
 
 def interval_aabb(comp, axis):
     """Get the interval of an AABB"""    
@@ -451,20 +487,19 @@ def handle_AABBtoAABB(collision):
     """Handle a collision between two AABBs"""
     a, b = collision.entity1, collision.entity2
     _a, _b = collision.shape1, collision.shape2
-    # find center of the collision
-    distance = a.position - b.position
+    # get distance vector
+    distance = a._projected_position - b._projected_position
     center = distance / 2
-    # get distance between the support fo (left) and rsuppoert for (b)
-    left, right = (a, _a), (b, _b)
-    if collision.interval1.x < collision.interval2.x:
-        left, right = (b, _b), (a, _a)
-    # get the mtv
-    mtv = left[1].get_support(distance) - right[1].get_isupport(distance)
+    dnorm = distance.rotate(90).normalize()
+    # get the projected points on distance axis --> for a + b
+    ma = _a.get_projected_support(distance)
+    mb = _b.get_projected_isupport(distance)
+    # find mtv
+    mtv = (ma-mb)*distance.normalize()
     tv = mtv / 2
-
-    # move the objects
-    left[0].position -= tv
-    right[0].position += tv
+    # apply translation 
+    a._projected_position -= tv
+    b._projected_position += tv
 
 
 # register the functions

@@ -49,10 +49,6 @@ class MovementAspect(scene.Aspect):
             # push object towards position
             e.rect.center = e.position.xy
 
-            # floor velocity values for physics
-            e.velocity.x = int(e.velocity.x)
-            e.velocity.y = int(e.velocity.y)
-
             # if e.__class__.__name__ == "Tomato":
             #     print(e.velocity)
 
@@ -274,11 +270,12 @@ class Collision2DAspect(scene.Aspect):
         bc = b.get_component(Collision2DComponent)
         acol = ac._shape
         bcol = bc._shape
-        if physics.check_overlap(acol, bcol, physics.RIGHT) and physics.check_overlap(acol, bcol, physics.UP):
-            col = physics.Collision(acol, bcol)
-            self._collisions.append(col)
+        axis = b._projected_position - a._projected_position
+        if physics.check_overlap(acol, bcol, axis):
+        # if physics.check_overlap(acol, bcol, physics.RIGHT) and physics.check_overlap(acol, bcol, physics.UP):
+            self._collisions.append(physics.Collision(acol, bcol))
 
-    def resolve_collision(self, collision):
+    def resolve_collisions(self):
         """Handle the collision
 
         Find a = axis of collision
@@ -288,41 +285,44 @@ class Collision2DAspect(scene.Aspect):
         
         find the right function to handle collision :D
         """
-        # a, b = collision.entity1, collision.entity2
-        # # print(a, b)
-        # if a.get_component(Collision2DComponent)._shape and b.get_component(Collision2DComponent)._shape:
-        #     # get and then run the collision handling function
-        #     _a, _b = a.get_component(Collision2DComponent)._shape, b.get_component(Collision2DComponent)._shape
-        #     # print(_a, _b)
-        physics.resolve_collision(collision)
-
-    def handle(self):
-        """Handle Collisions for Collision2D Components"""
-        # consider chunking
-        for e1 in self.iterate_entities():
-            for e2 in self.iterate_entities():
-                if e1 == e2: continue
-                # handle collision checking
-                self.handle_collision_check(e1, e2)
-        """
-        Loop through all collisions
-        - cache the checked collisions
-        - because we know that there may be duplicate!
-        - we don't know when duplicates will appear, so cache!
-        - check!
-        - use a set!!! hash the collision system --> sorting? lower id value is first?? 
-        - or we can add id's together and then sort by that
-        - or take entity number or smth (then we gotta add in counting for ehandler)
-        - hash that (bit shifting) then do some check with that
-        """
         for col in self._collisions:
             # check if the collision is already in the cache
             if col in self._cache: continue
             # add the collision to the cache
             self._cache.add(col)
-            # get the entities
-            # a, b = col.entity1, col.entity2
-            self.resolve_collision(col)
+            # call resolve collision
+            physics.resolve_collision(col)
+
+    def update_projected_position(self):
+        """Update the projected position of the entities"""
+        # update all entity positions first
+        for e in self.iterate_entities():
+            e._projected_position = e.position + e.velocity
+
+    def find_projected_collisions(self):
+        """Find the projected collisions"""
+        for e1 in self.iterate_entities():
+            for e2 in self.iterate_entities():
+                if e1 == e2: continue
+                # handle collision checking
+                self.handle_collision_check(e1, e2)
+    
+    def update_final_positions(self):
+        """Update the final positions of the entities"""
+        for e in self.iterate_entities():
+            e.position = e._projected_position
+
+    def handle(self):
+        """Handle Collisions for Collision2D Components"""
+        # update projected positions
+        self.update_projected_position()
+        # find collisions of projected entities
+        self.find_projected_collisions()
+        # resolve collisions
+        self.resolve_collisions()
+        # update final positions
+        self.update_final_positions()
+        # clear cache
         self._collisions.clear()
         self._cache.clear()
 
@@ -334,18 +334,18 @@ class Collision2DRendererAspectDebug(Collision2DAspect):
     def __init__(self):
         super().__init__()
 
-    def handle(self):
-        """Handle Collisions for Collision2D Components"""
-        # consider chunking
+    def find_projected_collisions(self):
+        """Find the projected collisions"""
         for e1 in self.iterate_entities():
-            # debug components
+            # debug comps
             c1 = e1.get_component(Collision2DComponent)
             pos = c1.get_relative_position()
-            # draw the collision area
+            # draw collision area
             pgdraw.rect(soragl.SoraContext.FRAMEBUFFER, (255, 0, 0), pgRect(pos - (c1._shape._rect.w/2, c1._shape._rect.h/2), (c1._shape._rect.w, c1._shape._rect.h)), 1)
             # loop entitites
             for e2 in self.iterate_entities():
                 if e1 == e2: continue
+
                 # handle collision checking
                 self.handle_collision_check(e1, e2)
                 
@@ -375,17 +375,6 @@ class Collision2DRendererAspectDebug(Collision2DAspect):
                             e1s, (rxpos, e1s.y), 1)
                 pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 100, 100),
                             e2s, (rxpos, e2s.y), 1)
-
-        for col in self._collisions:
-            # check if the collision is already in the cache
-            if col in self._cache: continue
-            # add the collision to the cache
-            self._cache.add(col)
-            # get the entities
-            # a, b = col.entity1, col.entity2
-            self.resolve_collision(col)
-        self._collisions.clear()
-        self._cache.clear()
 
 
 # ------------------------------------------------------------ #

@@ -464,35 +464,29 @@ def resolve_collision(collision):
 
 def handle_AABBtoAABB(collision):
     """Handle a collision between two AABBs"""
-    penetration = float('inf')
-    for i1, i2 in collision.get_intersects():
-        # Calculate the normal of the collision
-        normal = collision.entity2.position - collision.entity1.position
-        if not normal: return 
-        normal.normalize_ip()
+    a, b = collision.entity1, collision.entity2
+    _a, _b = collision.shape1, collision.shape2
+    # find center of the collision
+    distance = a.position - b.position
+    center = distance / 2
+    # get distance between the support fo (left) and rsuppoert for (b)
+    left, right = (a, _a), (b, _b)
+    if collision.interval1.x < collision.interval2.x:
+        left, right = (b, _b), (a, _a)
+    # get the mtv
+    mtv = left[1].get_support(distance) - right[1].get_isupport(distance)
+    tv = mtv / 2
 
-        # Calculate the relative velocity of the objects
-        rel_velocity = collision.entity2.velocity - collision.entity1.velocity
-
-        # Calculate the impulse scalar
-        impulse_scalar = rel_velocity.dot(normal) / normal.dot(normal)
-
-        # Calculate the impulse vector
-        impulse = normal * impulse_scalar
-
-        # Apply the impulse to each object
-        collision.entity1.velocity -= impulse
-        collision.entity2.velocity += impulse
-
-        # Move each object away from the other along the normal by the penetration depth
-        correction = normal * (penetration / 2.0)
-        collision.entity1.position -= correction
-        collision.entity2.position += correction
+    # move the objects
+    left[0].position -= tv
+    right[0].position += tv
 
 def handle_AABBtoBox2D(collision):
     pass
 
 # register the functions
+
+register_handle_function(AABB, AABB, handle_AABBtoAABB)
 
 register_handle_function(AABB, AABB, handle_AABBtoAABB)
 register_handle_function(AABB, Box2D, handle_AABBtoBox2D)

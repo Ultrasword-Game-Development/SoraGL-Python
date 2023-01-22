@@ -342,7 +342,6 @@ class Collision2DRendererAspectDebug(Collision2DAspect):
             # loop entitites
             for e2 in self.iterate_entities():
                 if e1 == e2: continue
-
                 # handle collision checking
                 self.handle_collision_check(e1, e2)
                 

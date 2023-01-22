@@ -150,6 +150,7 @@ class SoraContext:
     # window/camera data
     WINDOW = None
     FRAMEBUFFER = None
+    DEBUGBUFFER = None
     CLOCK = None
     RUNNING = False
     
@@ -158,6 +159,7 @@ class SoraContext:
         """Creates window context and Framebuffer for Sora Engine."""
         cls.WINDOW = pygame.display.set_mode(cls.WSIZE, cls.WFLAGS, cls.WBITS)
         cls.FRAMEBUFFER = pygame.Surface(cls.FSIZE, cls.FFLAGS, cls.FBITS)
+        cls.DEBUGBUFFER = pygame.Surface(cls.FSIZE, cls.FFLAGS, cls.FBITS)
         cls.CLOCK = pygame.time.Clock()
         cls.RUNNING = True
     
@@ -167,11 +169,20 @@ class SoraContext:
         if cls.MODERNGL:
             # push frame buffer to moderngl window context
             mgl.ModernGL.render(mgl.Texture.pg2gltex(cls.FRAMEBUFFER, "fb"))
+            if cls.DEBUG:
+                mgl.ModernGL.render(mgl.Texture.pg2gltex(cls.DEBUGBUFFER, "debug"))
             pygame.display.flip()
         else:
             # render frame buffer texture to window!
             cls.WINDOW.blit(pygame.transform.scale(cls.FRAMEBUFFER, cls.WSIZE), (0,0))
+            cls.WINDOW.blit(pygame.transform.scale(cls.DEBUGBUFFER, cls.WSIZE), (0,0))
             pygame.display.update()
+
+    @classmethod
+    def refresh_buffers(cls, color):
+        """Refreshes framebuffer and debugbuffer"""
+        cls.FRAMEBUFFER.fill(color)
+        cls.DEBUGBUFFER.fill((0, 0, 0, 0))
 
     @classmethod
     def update_window_resize(cls, event):

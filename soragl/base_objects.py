@@ -35,7 +35,7 @@ class MovementComponent(scene.Component):
 # aspect
 class MovementAspect(scene.Aspect):
     def __init__(self):
-        super().__init__(MovementComponent, 5)
+        super().__init__(MovementComponent, 20)
         self.priority = 5
         # print("created movement aspect", self.priority)
     
@@ -48,7 +48,13 @@ class MovementAspect(scene.Aspect):
             e.position += e.velocity * soragl.SoraContext.DELTA
             # push object towards position
             e.rect.center = e.position.xy
-            # print(e.rect)
+
+            # floor velocity values for physics
+            e.velocity.x = int(e.velocity.x)
+            e.velocity.y = int(e.velocity.y)
+
+            # if e.__class__.__name__ == "Tomato":
+            #     print(e.velocity)
 
             # handle if leaving chunk
             cx = e.rect.centerx // e.world._options["chunkpixw"]
@@ -166,6 +172,7 @@ class SpriteRendererAspect(scene.Aspect):
             # render the sprite
             soragl.SoraContext.FRAMEBUFFER.blit(c_sprite.sprite, pos - (c_sprite.hwidth, c_sprite.hheight))
 
+# debug aspect
 class SpriteRendererAspectDebug(scene.Aspect):
     def __init__(self):
         super().__init__(SpriteRenderer)
@@ -181,7 +188,7 @@ class SpriteRendererAspectDebug(scene.Aspect):
             # print(c_sprite)
             # render the sprite
             soragl.SoraContext.FRAMEBUFFER.blit(c_sprite.sprite, e.position - (c_sprite.hwidth, c_sprite.hheight))
-            pgdraw.rect(soragl.SoraContext.FRAMEBUFFER, (0, 0, 255), pgRect(e.position - (c_sprite.hwidth, c_sprite.hheight), c_sprite.sprite.get_size()), 1)
+            pgdraw.rect(soragl.SoraContext.DEBUGBUFFER, (0, 0, 255), pgRect(e.position - (c_sprite.hwidth, c_sprite.hheight), c_sprite.sprite.get_size()), 1)
 
 
 # ------------------------------ #
@@ -249,32 +256,12 @@ class Collision2DComponent(scene.Component):
         """Apply a force to the component"""
         self._force += force
 
-
 # aspect
 class Collision2DAspect(scene.Aspect):
 
-    FUNCTIONS = {}
-
-    # function system
-    @classmethod
-    def register_collision_handle_function(cls, type1, type2, func):
-        """Register collision handling function"""
-        cls.FUNCTIONS[(hash(type1), hash(type2))] = func
-        cls.FUNCTIONS[(hash(type2), hash(type1))] = func
-
-    @classmethod
-    def get_collision_handle_function(cls, type1, type2):
-        """return a collision handling function - type1/2 shape components"""
-        key = (hash(type1), hash(type2))
-        if key in cls.FUNCTIONS:
-            return cls.FUNCTIONS[key]
-        raise NotImplementedError("Missing function for: ", type1.__class__.__name__, "and", type2.__class__.__name__)
-
-    # ------------------------------ #
-
     def __init__(self):
         super().__init__(Collision2DComponent)
-        self.priority = 10
+        self.priority = 19
         # private
         self._collisions = []
         self._cache = set()
@@ -282,24 +269,18 @@ class Collision2DAspect(scene.Aspect):
 
     def handle_collision_check(self, a, b):
         """Check if there are collisions"""
-        # print(a, b)
+        # grab the collision components
         ac = a.get_component(Collision2DComponent)
         bc = b.get_component(Collision2DComponent)
         acol = ac._shape
         bcol = bc._shape
-        # grab the collision components
         if physics.check_overlap(acol, bcol, physics.RIGHT) and physics.check_overlap(acol, bcol, physics.UP):
             col = physics.Collision(acol, bcol)
             self._collisions.append(col)
-            # print(hash(col))
-            # print(acol._rect, bcol._rect)
 
-    def handle_collision(self, collision):
-        """Handle the collision"""
-        # calculate final momentum -- determine elasticity
-        # conservation of momentum + energy
-        # TODO: physics 2D collision stuff :D - FOR POLYGONS!!! all shapes???
-        """
+    def resolve_collision(self, collision):
+        """Handle the collision
+
         Find a = axis of collision
         - then using momentum equation:
         - since momentum conserved in 'a'
@@ -307,13 +288,13 @@ class Collision2DAspect(scene.Aspect):
         
         find the right function to handle collision :D
         """
-        a, b = collision.entity1, collision.entity2
-        # print(a, b)
-        if a.get_component(Collision2DComponent)._shape and b.get_component(Collision2DComponent)._shape:
-            # get and then run the collision handling function
-            _a, _b = a.get_component(Collision2DComponent)._shape, b.get_component(Collision2DComponent)._shape
-            # print(_a, _b)
-            Collision2DAspect.get_collision_handle_function(_a, _b)(collision)
+        # a, b = collision.entity1, collision.entity2
+        # # print(a, b)
+        # if a.get_component(Collision2DComponent)._shape and b.get_component(Collision2DComponent)._shape:
+        #     # get and then run the collision handling function
+        #     _a, _b = a.get_component(Collision2DComponent)._shape, b.get_component(Collision2DComponent)._shape
+        #     # print(_a, _b)
+        physics.resolve_collision(collision)
 
     def handle(self):
         """Handle Collisions for Collision2D Components"""
@@ -323,16 +304,6 @@ class Collision2DAspect(scene.Aspect):
                 if e1 == e2: continue
                 # handle collision checking
                 self.handle_collision_check(e1, e2)
-        # handle collisions
-        # print(len(self._collisions))
-        # self._collisions.clear()
-
-        # TODO: create a collision object:
-        # id = sum of the entity id's
-        #       makes sure that duplicates are not existent
-        # then collisions contain the two "shapes" that collided
-        # and then we can handle it!
-        
         """
         Loop through all collisions
         - cache the checked collisions
@@ -344,64 +315,77 @@ class Collision2DAspect(scene.Aspect):
         - or take entity number or smth (then we gotta add in counting for ehandler)
         - hash that (bit shifting) then do some check with that
         """
-        
-        # print(self._collisions)
         for col in self._collisions:
             # check if the collision is already in the cache
-            if col in self._cache: 
-                continue
+            if col in self._cache: continue
             # add the collision to the cache
             self._cache.add(col)
             # get the entities
             # a, b = col.entity1, col.entity2
-            self.handle_collision(col)
-        
-        # TODO: remember to clear the cache each time!!!
-        # this is for programmers!
-
+            self.resolve_collision(col)
         self._collisions.clear()
         self._cache.clear()
 
 
-
-# add functions for handling collisions between things
-
-def handleAABBBox2D(col):
-    """Handle AABB to Box2D collision"""
-    # conserved in parallel - we have perp as well
-    print("finish please")
-
-def handleAABBAABB(col):
-    """Handle AABB to AABB collision"""
-    # just x-axis + y-axis handling --> perhaps rebounding
-    a, b = col.entity1, col.entity2
-    ac, bc = col.shape1, col.shape2
-    
-
-
-
-# add box2d as well!
-
-Collision2DAspect.register_collision_handle_function(physics.AABB, physics.AABB, handleAABBAABB)
-
 # ------------------------------ #
 # debug render collision areas
 
-class Collision2DRendererAspectDebug(scene.Aspect):
+class Collision2DRendererAspectDebug(Collision2DAspect):
     def __init__(self):
-        super().__init__(Collision2DComponent)
-        self.priority = 0
+        super().__init__()
 
     def handle(self):
         """Handle Collisions for Collision2D Components"""
         # consider chunking
-        for e in self._world.iter_active_entities():
-            if not e.entity_has_component(Collision2DComponent): continue
-            # grab the collision components
-            c = e.get_component(Collision2DComponent)
-            pos = c.get_relative_position()
+        for e1 in self.iterate_entities():
+            # debug components
+            c1 = e1.get_component(Collision2DComponent)
+            pos = c1.get_relative_position()
             # draw the collision area
-            pgdraw.rect(soragl.SoraContext.FRAMEBUFFER, (255, 0, 0), pgRect(pos - (c._shape._rect.w/2, c._shape._rect.h/2), (c._shape._rect.w, c._shape._rect.h)), 1)
+            pgdraw.rect(soragl.SoraContext.FRAMEBUFFER, (255, 0, 0), pgRect(pos - (c1._shape._rect.w/2, c1._shape._rect.h/2), (c1._shape._rect.w, c1._shape._rect.h)), 1)
+            # loop entitites
+            for e2 in self.iterate_entities():
+                if e1 == e2: continue
+                # handle collision checking
+                self.handle_collision_check(e1, e2)
+                
+                c2 = e2.get_component(Collision2DComponent)
+                # draw a line between the two entities
+                center = (e1.position + e2.position) / 2
+                dvec = (e1.position - e2.position).normalize()
+                rdvec = dvec.rotate(90)
+                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 255, 0), 
+                            center + rdvec * 10, center - rdvec * 10, 1)
+                # some more art for support calculations
+                rxpos = max(e1.position.x, e2.position.x)
+                rypos = max(e1.position.y, e2.position.y)
+                # 2 lines for x and y axis
+                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 255, 0),
+                            (rxpos, e1.position.y), (rxpos, e2.position.y), 1)
+                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 255, 0),
+                            (e1.position.x, rypos), (e2.position.x, rypos), 1)
+                # draw support lines
+                e1s, e1is = c1._shape.get_support(dvec), c1._shape.get_isupport(dvec)
+                e2s, e2is = c2._shape.get_support(dvec), c2._shape.get_isupport(dvec)
+                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 100, 100),
+                            e1s, (e1s.x, rypos), 1)
+                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 100, 100),
+                            e2s, (e2s.x, rypos), 1)
+                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 100, 100),
+                            e1s, (rxpos, e1s.y), 1)
+                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 100, 100),
+                            e2s, (rxpos, e2s.y), 1)
+
+        for col in self._collisions:
+            # check if the collision is already in the cache
+            if col in self._cache: continue
+            # add the collision to the cache
+            self._cache.add(col)
+            # get the entities
+            # a, b = col.entity1, col.entity2
+            self.resolve_collision(col)
+        self._collisions.clear()
+        self._cache.clear()
 
 
 # ------------------------------------------------------------ #

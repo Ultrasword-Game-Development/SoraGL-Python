@@ -40,6 +40,7 @@ class Entity:
         self._alive = True
         Entity.ENTITY_COUNT += 1
         self._entity_id = Entity.ENTITY_COUNT
+        self._projected_position = pgmath.Vector2()
 
         # public
         self.c_chunk = [0, 0]
@@ -104,6 +105,7 @@ class Entity:
 
 class Collision:
     def __init__(self, ec1, ec2):
+        """Create a collision object"""
         entity1, entity2 = ec1._entity, ec2._entity
         # private
         h1, h2 = hash(entity1), hash(entity2)
@@ -114,11 +116,16 @@ class Collision:
         self.entity2 = entity2
         self.shape1 = ec1
         self.shape2 = ec2
+        self.dvec = self.entity1.position - self.entity2.position
+        self.collisiontype = (hash(ec1.__class__), hash(ec2.__class__))
+        self.interval1 = get_interval(self.shape1, self.dvec)
+        self.interval2 = get_interval(self.shape1, self.dvec)
         # the rest of the data is to be calculated
         # TODO: 
-        self.normal1 = self.entity1.position - self.entity2.position
-        self.normal1.normalize_ip()
-        self.normal2 = -self.normal1
+        # velocity + reflect off surface
+        # self.normal1 = self.entity1.position - self.entity2.position
+        # self.normal1.normalize_ip()
+        # self.normal2 = -self.normal1
         # self.penetration = ?
 
     def __hash__(self):
@@ -143,13 +150,24 @@ class CollisionShape(scene.Component):
         return list(self.iterate_vertices())
     
     def get_support(self, dvec: pgmath.Vector2):
-        """Get the support vector - position"""
+        """Get the support vector - position - greatest dis point from an axis"""
         highest = -1e9
         support = pgmath.Vector2()
         for v in self.get_vertices():
             dot = dvec.dot(v)
             if dot > highest:
                 highest = dot
+                support = v
+        return support
+    
+    def get_isupport(self, dvec: pgmath.Vector2):
+        """Get the reverse support vector - position - lowest dis from an axis"""
+        lowest = 1e9
+        support = pgmath.Vector2()
+        for v in self.get_vertices():
+            dot = dvec.dot(v)
+            if dot < lowest:
+                lowest = dot
                 support = v
         return support
 
@@ -317,16 +335,20 @@ def register_interval_function(comp_class, func):
 # ------------------------------ #
 # interval functions
 
+def project_point_to_axis(point, axis):
+    """Project a point onto an axis"""
+    return axis.dot(point)
+
 def interval_aabb(comp, axis):
     """Get the interval of an AABB"""    
     result = pgmath.Vector2(0, 0)
     # axis.rotate_ip(90)
     points = comp.get_vertices()
-    result.x = axis.dot(points[0])
+    result.x = project_point_to_axis(points[0], axis)
     result.y = result.x
     for point in points[1:]:
         # ang = axis.angle_to(point)
-        projection = axis.dot(point)
+        projection = project_point_to_axis(point, axis)
         if projection < result.x:
             result.x = projection
         if projection > result.y:
@@ -371,6 +393,7 @@ def register_overlap_function(comp_class_a, comp_class_b, func):
     OVERLAP_FUNC[(hash(comp_class_a), hash(comp_class_b))] = func
     OVERLAP_FUNC[(hash(comp_class_b), hash(comp_class_a))] = func
 
+
 # ------------------------------ #
 # overlap functions
 
@@ -413,27 +436,40 @@ HANDLE_FUNC = {}
 
 def register_handle_function(comp_class_a, comp_class_b, func):
     """Register a collision function"""
-    HANDLE_FUNC[(hash(comp_class_a.__class__), hash(comp_class_b.__class__))] = func
+    HANDLE_FUNC[(hash(comp_class_a), hash(comp_class_b))] = func
+    HANDLE_FUNC[(hash(comp_class_b), hash(comp_class_a))] = func
 
 
-def handle_AABBtoAABB(a, b):
+def resolve_collision(collision):
+    """Resolve a collision between two objects"""
+    return HANDLE_FUNC[collision.collisiontype](collision)
+
+# ------------------------------ #
+# resolving function
+
+def handle_AABBtoAABB(collision):
     """Handle a collision between two AABBs"""
-    # get the center of the collision
-    center = (a.position + b.position) / 2
-
-    # get the distance between the two objects
+    a, b = collision.entity1, collision.entity2
+    _a, _b = collision.shape1, collision.shape2
+    # find center of the collision
     distance = a.position - b.position
-
-    # get the minimum translation vector
-    mtv = pgmath.Vector2(0, 0)
-    if abs(distance.x) < abs(distance.y):
-        mtv.x = distance.x
-    else:
-        mtv.y = distance.y
+    center = distance / 2
+    # get distance between the support fo (left) and rsuppoert for (b)
+    left, right = (a, _a), (b, _b)
+    if collision.interval1.x < collision.interval2.x:
+        left, right = (b, _b), (a, _a)
+    # get the mtv
+    mtv = left[1].get_support(distance) - right[1].get_isupport(distance)
+    tv = mtv / 2
 
     # move the objects
-    a.position -= mtv / 2
-    b.position += mtv / 2
+    left[0].position -= tv
+    right[0].position += tv
+
+
+# register the functions
+
+register_handle_function(AABB, AABB, handle_AABBtoAABB)
 
 
 # ------------------------------------------------------------ #

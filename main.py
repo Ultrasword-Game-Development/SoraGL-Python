@@ -93,7 +93,7 @@ scw.add_entity(sce2)
 scw.add_entity(sce3particle)
 scw.add_entity(sce4particle)
 scw.add_entity(sce5particle)
-scw.add_entity(tomato.Tomato(position=(100, 100)))
+scw.add_entity(tomato.Tomato(position=(50, 100)))
 
 
 # entity comp
@@ -130,7 +130,7 @@ scene.SceneHandler.push_scene(sc)
 
 # ------------------------------ #
 # game loop
-SORA.start_soragl_time()
+SORA.start_engine_time()
 while SORA.RUNNING:
     # SORA.FRAMEBUFFER.fill((255, 255, 255, 255))
     SORA.FRAMEBUFFER.fill((0, 0, 0, 255))
@@ -150,7 +150,7 @@ while SORA.RUNNING:
     ModernGL.update_context()
     ModernGL.CTX.clear(ModernGL.CLEARCOLOR[0], ModernGL.CLEARCOLOR[1], ModernGL.CLEARCOLOR[2], ModernGL.CLEARCOLOR[3])
     ModernGL.CTX.enable(mgl.moderngl.BLEND)
-    vattrib.change_uniform("utime", SORA.soragl_UPTIME % 10000)
+    vattrib.change_uniform("utime", SORA.ENGINE_UPTIME % 10000)
     vattrib.change_uniform("framebuffer", mgl.Texture.pg2gltex(SORA.FRAMEBUFFER, "fb"))
 
     # vao.render(mode=mgl.moderngl.TRIANGLES)

@@ -263,18 +263,16 @@ class Collision2DAspect(scene.Aspect):
         self._cache = set()
         self._handler_aspect = None # to be set after in 'on_add' of the collision2dhandleraspect
 
-    def handle_collision_check(self, a, b):
+    def handle_collision_check(self, a, b) -> bool:
         """Check if there are collisions"""
         # grab the collision components
         ac = a.get_component(Collision2DComponent)
         bc = b.get_component(Collision2DComponent)
         acol = ac._shape
         bcol = bc._shape
-        axis = b._projected_position - a._projected_position
-        if physics.check_overlap(acol, bcol, axis):
-        # if physics.check_overlap(acol, bcol, physics.RIGHT) and physics.check_overlap(acol, bcol, physics.UP):
-            self._collisions.append(physics.Collision(acol, bcol))
-
+        # check if there is a collision along x and y axis
+        return physics.check_overlap(acol, bcol, physics.RIGHT) and physics.check_overlap(acol, bcol, physics.UP)
+        
     def resolve_collisions(self):
         """Handle the collision
 
@@ -305,8 +303,9 @@ class Collision2DAspect(scene.Aspect):
             for e2 in self.iterate_entities():
                 if e1 == e2: continue
                 # handle collision checking
-                self.handle_collision_check(e1, e2)
-    
+                if self.handle_collision_check(e1, e2):
+                    physics.resolve_collision(physics.Collision(e1, e2))
+
     def update_final_positions(self):
         """Update the final positions of the entities"""
         for e in self.iterate_entities():
@@ -318,8 +317,6 @@ class Collision2DAspect(scene.Aspect):
         self.update_projected_position()
         # find collisions of projected entities
         self.find_projected_collisions()
-        # resolve collisions
-        self.resolve_collisions()
         # update final positions
         self.update_final_positions()
         # clear cache
@@ -352,6 +349,7 @@ class Collision2DRendererAspectDebug(Collision2DAspect):
                 c2 = e2.get_component(Collision2DComponent)
                 # draw a line between the two entities
                 center = (e1.position + e2.position) / 2
+                if not e1.position - e2.position: continue
                 dvec = (e1.position - e2.position).normalize()
                 rdvec = dvec.rotate(90)
                 pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 255, 0), 
@@ -405,8 +403,8 @@ def update_square_particle(parent, particle):
         parent.remove_particle(particle)
         return
     # set color value
-    particle[4][0] = int(math.sin(soragl.SoraContext.soragl_UPTIME) * 127 + 127)
-    particle[4][1] = int(math.cos(soragl.SoraContext.soragl_UPTIME) * 127 + 127)
+    particle[4][0] = int(math.sin(soragl.SoraContext.ENGINE_UPTIME) * 127 + 127)
+    particle[4][1] = int(math.cos(soragl.SoraContext.ENGINE_UPTIME) * 127 + 127)
     particle[4][2] = int(math.sin(particle[0].x) * 127 + 127)
     # just spin + move in random direction
     particle[0] += particle[1] * soragl.SoraContext.DELTA
@@ -444,8 +442,8 @@ def update_triangle_particle(parent, particle):
         parent.remove_particle(particle)
         return
     # set color value
-    particle[4][0] = int(math.sin(soragl.SoraContext.soragl_UPTIME) * 127 + 127)
-    particle[4][1] = int(math.cos(soragl.SoraContext.soragl_UPTIME) * 127 + 127)
+    particle[4][0] = int(math.sin(soragl.SoraContext.ENGINE_UPTIME) * 127 + 127)
+    particle[4][1] = int(math.cos(soragl.SoraContext.ENGINE_UPTIME) * 127 + 127)
     particle[4][2] = int(math.sin(particle[0].x) * 127 + 127)
     # just spin + move in random direction
     particle[0] += particle[1] * soragl.SoraContext.DELTA
@@ -507,7 +505,7 @@ def update_custom_particle(parent, particle):
         return
     # set color value
     particle[4][0] = 255 - abs(int(math.sin(particle[0].y) * 100))
-    particle[4][1] = abs(int(math.cos(soragl.SoraContext.soragl_UPTIME) * 129))
+    particle[4][1] = abs(int(math.cos(soragl.SoraContext.ENGINE_UPTIME) * 129))
     particle[4][2] = 200 - abs(int(math.sin(particle[0].x) * 40))
     # just spin + move in random direction
     particle[0] += particle[1] * soragl.SoraContext.DELTA

@@ -118,15 +118,15 @@ class Collision:
         self.shape2 = ec2
         self.dvec = self.entity1.position - self.entity2.position
         self.collisiontype = (hash(ec1.__class__), hash(ec2.__class__))
-        self.interval1 = get_interval(self.shape1, self.dvec)
-        self.interval2 = get_interval(self.shape1, self.dvec)
+        self.intersect1 = (get_interval(self.shape1, RIGHT), get_interval(self.shape1, UP))
+        self.intersect2 = (get_interval(self.shape2, RIGHT), get_interval(self.shape2, UP))
         # the rest of the data is to be calculated
-        # TODO: 
-        # velocity + reflect off surface
-        # self.normal1 = self.entity1.position - self.entity2.position
-        # self.normal1.normalize_ip()
-        # self.normal2 = -self.normal1
-        # self.penetration = ?
+
+    
+    def get_intersects(self):
+        """Get the intersects of the collision"""
+        yield self.intersect1[0], self.intersect2[0]
+        yield self.intersect1[1], self.intersect2[1]
 
     def __hash__(self):
         """Overload the 'id' operator"""
@@ -362,7 +362,6 @@ def get_interval(comp, axis):
     global INTERVAL_FUNC
     return INTERVAL_FUNC[hash(comp.__class__)](comp, axis)
 
-
 def register_interval_function(comp_class, func):
     """Register an interval function"""
     global INTERVAL_FUNC
@@ -375,7 +374,7 @@ def project_point_to_axis(point, axis):
     """Project a point onto an axis"""
     return axis.rotate(90).dot(point)
 
-def interval_aabb(comp, axis):
+def get_interval(comp, axis):
     """Get the interval of an AABB"""    
     result = pgmath.Vector2(0, 0)
     # axis.rotate_ip(90)
@@ -391,26 +390,6 @@ def interval_aabb(comp, axis):
             result.y = projection
     return result
 
-
-# dont know if necassary
-# def interval_box2d(comp, axis):
-#     """Get the interval of a Box2D"""
-#     result = pgmath.Vector2(0, 0)
-
-#     for point in comp.iterate_vertices():
-#         projection = axis.dot(point)
-#         if projection < result.x:
-#             result.x = projection
-#         if projection > result.y:
-#             result.y = projection
-#     return result
-
-
-# ------------------------------ #
-# register!
-
-register_interval_function(AABB, interval_aabb)
-register_interval_function(Box2D, interval_aabb) # inteval_box2d
 
 # ------------------------------------------------------------ #
 # overlapping axis
@@ -485,27 +464,38 @@ def resolve_collision(collision):
 
 def handle_AABBtoAABB(collision):
     """Handle a collision between two AABBs"""
-    a, b = collision.entity1, collision.entity2
-    _a, _b = collision.shape1, collision.shape2
-    # get distance vector
-    distance = a._projected_position - b._projected_position
-    center = distance / 2
-    dnorm = distance.rotate(90).normalize()
-    # get the projected points on distance axis --> for a + b
-    ma = _a.get_projected_support(distance)
-    mb = _b.get_projected_isupport(distance)
-    # find mtv
-    mtv = (ma-mb)*distance.normalize()
-    tv = mtv / 2
-    # apply translation 
-    a._projected_position -= tv
-    b._projected_position += tv
+    penetration = float('inf')
+    for i1, i2 in collision.get_intersects():
+        # Calculate the normal of the collision
+        normal = collision.entity2.position - collision.entity1.position
+        if not normal: return 
+        normal.normalize_ip()
 
+        # Calculate the relative velocity of the objects
+        rel_velocity = collision.entity2.velocity - collision.entity1.velocity
+
+        # Calculate the impulse scalar
+        impulse_scalar = rel_velocity.dot(normal) / normal.dot(normal)
+
+        # Calculate the impulse vector
+        impulse = normal * impulse_scalar
+
+        # Apply the impulse to each object
+        collision.entity1.velocity -= impulse
+        collision.entity2.velocity += impulse
+
+        # Move each object away from the other along the normal by the penetration depth
+        correction = normal * (penetration / 2.0)
+        collision.entity1.position -= correction
+        collision.entity2.position += correction
+
+def handle_AABBtoBox2D(collision):
+    pass
 
 # register the functions
 
 register_handle_function(AABB, AABB, handle_AABBtoAABB)
-
+register_handle_function(AABB, Box2D, handle_AABBtoBox2D)
 
 # ------------------------------------------------------------ #
 # particle handling + physics

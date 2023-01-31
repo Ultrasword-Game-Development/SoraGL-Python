@@ -49,9 +49,6 @@ class MovementAspect(scene.Aspect):
             # push object towards position
             e.rect.center = e.position.xy
 
-            # if e.__class__.__name__ == "Tomato":
-            #     print(e.velocity)
-
             # handle if leaving chunk
             cx = e.rect.centerx // e.world._options["chunkpixw"]
             cy = e.rect.centery // e.world._options["chunkpixh"]
@@ -284,6 +281,7 @@ class Collision2DAspect(scene.Aspect):
         find the right function to handle collision :D
         """
         for col in self._collisions:
+            # print(col)
             # check if the collision is already in the cache
             if col in self._cache: continue
             # add the collision to the cache
@@ -295,7 +293,7 @@ class Collision2DAspect(scene.Aspect):
         """Update the projected position of the entities"""
         # update all entity positions first
         for e in self.iterate_entities():
-            e._projected_position = e.position + e.velocity
+            e._projected_position = e.position + e.velocity * soragl.SoraContext.DELTA
 
     def find_projected_collisions(self):
         """Find the projected collisions"""

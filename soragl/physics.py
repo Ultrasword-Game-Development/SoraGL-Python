@@ -477,6 +477,8 @@ def handle_AABBtoAABB(collision):
     mtv = left[1].get_support(distance) - right[1].get_isupport(distance)
     tv = mtv / 2
 
+    print(tv)
+    
     # move the objects
     left[0].position -= tv
     right[0].position += tv

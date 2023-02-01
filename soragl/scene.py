@@ -91,17 +91,17 @@ class EntityHandler:
 # scene - chunks
 
 class Chunk:
-
     def __init__(self, x: int, y: int, world, options: dict):
         # private
         self._intrinstic_entities = set()
-        self._hash = f"{x}-{y}"
+        self._hash = f"{int(x)}-{int(y)}"
         self._world = world
         
         # public
         cpw, cph = options["chunkpixw"], options["chunkpixh"]
         self.area = pygame.Rect(x * cpw, y * cph, (x+1) * cpw, (y+1) * cph)
         # print(self.area)
+        # print(self._hash)
 
     def __hash__(self):
         """Hash the chunk"""
@@ -111,8 +111,7 @@ class Chunk:
         """Update the chunk"""
         # update all intrinstic entities
         for entity in self._intrinstic_entities:
-            self._world._ehandler._entities[entity].update()
-            # print(self._world._ehandler._entities[entity].c_chunk)
+            self._world._scene._global_entities[entity].update()
         # debug update
         if soragl.SoraContext.DEBUG:
             pygame.draw.rect(soragl.SoraContext.FRAMEBUFFER, (255, 0, 0), self.area, 1)
@@ -223,6 +222,7 @@ class World:
 
     def get_chunk(self, x: int, y: int):
         """Get the chunk"""
+        x, y = int(x), int(y)
         f = hash(f"{x}-{y}")
         if f in self._chunks:
             return self._chunks[f]
@@ -234,7 +234,7 @@ class World:
         """Iterate through the active entities"""
         for chunk in self._active_chunks:
             for entity in self._chunks[chunk]._intrinstic_entities:
-                yield self._ehandler._entities[entity]
+                yield self._scene._global_entities[entity]
 
     #== entitiy
     def get_entity(self, entity):
@@ -245,11 +245,13 @@ class World:
         """Add an entity to the world"""
         entity.world = self
         self._scene.add_entity(entity)
+        # register components in world
         for comp in entity.components:
             self.add_component(entity, comp)
         # add to chunk
-        self.get_chunk(entity.position.x // self._options["chunkpixw"], 
-                entity.position.y // self._options["chunkpixh"])._intrinstic_entities.add(entity)
+        c = self.get_chunk(entity.rect.centerx // self._options["chunkpixw"], 
+                entity.rect.centery // self._options["chunkpixh"])
+        c._intrinstic_entities.add(hash(entity))
 
     def update_entity_chunk(self, entity, old, new):
         """Update the chunk intrinsic properties for entities"""
@@ -334,8 +336,8 @@ class World:
     def update(self):
         """Update the world"""
         # == update chunks
-        for i in self._active_chunks:
-            self._chunks[i].update()
+        for chunk in self._active_chunks:
+            self._chunks[chunk].update()
         # == update aspects
         self.handle_aspects()
 
@@ -408,7 +410,7 @@ class Scene:
             layer.update()
         # add new entities
         buf = tuple(self._new_entities)
-        print(buf) if buf else None
+        # print(buf) if buf else None
         self._new_entities.clear()
         for pack in buf:
             pack.on_ready()

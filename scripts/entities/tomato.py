@@ -15,7 +15,7 @@ Tomato - Sprite Testing
 # class
 
 class Tomato(physics.Entity):
-    SPEED = 20
+    SPEED = 50
     LERP = 0.3
 
     def __init__(self, position: tuple):
@@ -47,8 +47,6 @@ class Tomato(physics.Entity):
             self.velocity += physics.UP * self.SPEED
         if soragl.SoraContext.is_key_pressed(pygame.K_s):
             self.velocity += physics.DOWN * self.SPEED
-        if soragl.SoraContext.is_key_pressed(pygame.K_SPACE):
-            self.physics_comp._angle += 1
         
 
 

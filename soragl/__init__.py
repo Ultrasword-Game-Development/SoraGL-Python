@@ -159,7 +159,7 @@ class SoraContext:
         """Creates window context and Framebuffer for Sora Engine."""
         cls.WINDOW = pygame.display.set_mode(cls.WSIZE, cls.WFLAGS, cls.WBITS)
         cls.FRAMEBUFFER = pygame.Surface(cls.FSIZE, cls.FFLAGS, cls.FBITS)
-        cls.DEBUGBUFFER = pygame.Surface(cls.FSIZE, cls.FFLAGS, cls.FBITS)
+        cls.DEBUGBUFFER = pygame.Surface(cls.FSIZE, cls.FFLAGS | pygame.SRCALPHA, cls.FBITS)
         cls.CLOCK = pygame.time.Clock()
         cls.RUNNING = True
     

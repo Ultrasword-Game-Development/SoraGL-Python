@@ -22,13 +22,15 @@ void main() {
 in vec2 fuv;
 
 uniform float utime;
-uniform sampler2D framebuffer;
+uniform sampler2D framebuffer, debugbuffer;
 
 out vec4 FragColor;
 // 7 
 void main(){
     vec4 texcol = texture(framebuffer, fuv);
+    vec4 debugcol = texture(debugbuffer, fuv);
     float val = utime * 2.;
     vec4 col = vec4(fuv.x, 1.0, 1.0, 1.0);
-    FragColor = texcol;
+    if (debugcol.w > 0.) FragColor = debugcol;
+    else FragColor = texcol;
 }

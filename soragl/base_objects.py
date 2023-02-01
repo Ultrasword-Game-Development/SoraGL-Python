@@ -1,5 +1,5 @@
 import soragl
-from soragl import scene, physics, mgl, animation
+from soragl import scene, physics, mgl, animation, SoraContext as SORA
 
 import random
 import math
@@ -34,6 +34,7 @@ class MissingComponent(Exception):
 class MissingSprite(Exception):
     def __init__(self, *args):
         super().__init__(*args)
+
 
 # sprite
 class Sprite(scene.Component):
@@ -205,15 +206,20 @@ class Collision2DAspect(scene.Aspect):
         move in x
         move in y
         check col both -- resolve col in both
+        check surroundings chunks for entities + static objects
+        - perform colsion check !!
 
         update rect pos
         update chunk pos
         """
-        pass
+        entity.position.x += entity.velocity.x * SORA.DELTA
+        # check for x
+
 
     def handle(self):
         """Handle Collisions for Collision2D Components"""
-        pass
+        for entity in self._world.iter_active_entities():
+            self.handle_movement(entity)
 
 
 # ------------------------------ #

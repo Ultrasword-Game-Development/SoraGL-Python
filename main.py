@@ -99,7 +99,6 @@ sce2.add_component(base_objects.AnimatedSprite(0, 0, registry))
 sce2.add_component(base_objects.SpriteRenderer())
 sce2.position += (200, 100)
 
-
 # physics
 sce1.add_component(base_objects.Collision2DComponent())
 sce2.add_component(base_objects.Collision2DComponent())
@@ -122,17 +121,12 @@ SORA.start_engine_time()
 while SORA.RUNNING:
     # SORA.FRAMEBUFFER.fill((255, 255, 255, 255))
     SORA.FRAMEBUFFER.fill((0, 0, 0, 255))
+    SORA.DEBUGBUFFER.fill((0, 0, 0, 0))
     # pygame update + render
     registry.update()
     scene.SceneHandler.update()
 
-
-    # pygame.draw.rect(SORA.FRAMEBUFFER, (0, 0, 255), pygame.Rect((200, 120), registry.get_frame().get_size()))
-    # SORA.FRAMEBUFFER.blit(registry.get_frame(), (200, 120))
-
-    # for i, spr in enumerate(__ss):
-    #     pygame.draw.rect(SORA.FRAMEBUFFER, (255, 100, 100), pygame.Rect((i*16 + 200, 30), spr.get_frame().get_size()))
-    #     SORA.FRAMEBUFFER.blit(spr.get_frame(), (i*16 + 200, 30))
+    # SORA.FRAMEBUFFER.blit(SORA.DEBUGBUFFER, (0, 0))
 
     # moderngl render
     ModernGL.update_context()
@@ -140,6 +134,7 @@ while SORA.RUNNING:
     ModernGL.CTX.enable(mgl.moderngl.BLEND)
     vattrib.change_uniform("utime", SORA.ENGINE_UPTIME % 10000)
     vattrib.change_uniform("framebuffer", mgl.Texture.pg2gltex(SORA.FRAMEBUFFER, "fb"))
+    vattrib.change_uniform("debugbuffer", mgl.Texture.pg2gltex(SORA.DEBUGBUFFER, "db"))
 
     # vao.render(mode=mgl.moderngl.TRIANGLES)
     vattrib.render()

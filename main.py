@@ -66,22 +66,17 @@ potato = SORA.load_image("assets/sprites/potato-2.png")
 __ss = animation.SpriteSheet(SORA.load_image("assets/sprites/stages.png"), 16, 16, 0, 0)
 
 sc = scene.Scene(config=scene.load_config(scene.Scene.DEFAULT_CONFIG))
-scw = scene.World(sc.get_config())
+scw = sc.make_layer(sc.get_config(), 1)
 scw.get_chunk(0, 0)
-sc.add_layer(scw, 0)
 
 sce1 = physics.Entity()
-
 sce2 = physics.Entity()
-
 sce3particle = physics.ParticleHandler(create_func=physics.ParticleHandler.DEFAULT_CREATE, 
                 update_func=physics.ParticleHandler.DEFAULT_UPDATE)
 sce3particle.position += (100, 100)
-
 sce4particle = physics.ParticleHandler(create_func="square", update_func="square")
 sce4particle.position += (200, 100)
 sce4particle["interval"] = 0.5
-
 # sce5particle = physics.ParticleHandler(create_func="triangle", update_func="triangle")
 sce5particle = physics.ParticleHandler(create_func="custom", update_func="custom")
 sce5particle.position += (200, 150)
@@ -95,33 +90,26 @@ scw.add_entity(sce4particle)
 scw.add_entity(sce5particle)
 scw.add_entity(tomato.Tomato(position=(50, 100)))
 
-
 # entity comp
-sce1.add_component(base_objects.MovementComponent())
 sce1.add_component(base_objects.Sprite(0, 0, potato))
 sce1.add_component(base_objects.SpriteRenderer())
 sce1.position += (100, 100)
 
-sce2.add_component(base_objects.MovementComponent())
 sce2.add_component(base_objects.AnimatedSprite(0, 0, registry))
 sce2.add_component(base_objects.SpriteRenderer())
 sce2.position += (200, 100)
 
 
 # physics
-sce1.add_component(physics.AABB(10, 10))
-sce1.add_component(base_objects.Collision2DComponent(10, 10))
-
-sce2.add_component(physics.Box2D(10, 10, degrees=0))
-sce2.add_component(base_objects.Collision2DComponent(10, 10))
+sce1.add_component(base_objects.Collision2DComponent())
+sce2.add_component(base_objects.Collision2DComponent())
 
 
 # aspects
-scw.add_aspect(base_objects.MovementAspect())
 scw.add_aspect(base_objects.Collision2DAspect())
 # scw.add_aspect(base_objects.SpriteRendererAspect())
 scw.add_aspect(base_objects.SpriteRendererAspectDebug())
-scw.add_aspect(base_objects.Collision2DRendererAspectDebug())
+# scw.add_aspect(base_objects.Collision2DRendererAspectDebug())
 
 scene.SceneHandler.push_scene(sc)
 

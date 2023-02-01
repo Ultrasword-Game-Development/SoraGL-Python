@@ -55,9 +55,9 @@ class EntityHandler:
 
     # ------------------------------ #
 
-    def __init__(self, world):
+    def __init__(self, scene):
         self._entities = {}
-        self._world = world
+        self._scene = scene
         self._new_entities = set()
     
     def initialize_entities_at_end_of_update(self):
@@ -142,7 +142,7 @@ class Aspect:
         """Iterate through the entities"""
         # print(self._world._components[self._target])
         for entity in self._world._components[self._target]:
-            yield self._world._ehandler._entities[entity]
+            yield self._world._scene.get_entity(hash(entity))
 
 # ------------------------------ #
 # components
@@ -187,10 +187,10 @@ class World:
     Acts as layers within a scene
     """
 
-    def __init__(self, options: dict, render_distance: int = 1, aspects: dict = {}, chunks: dict={}):
+    def __init__(self, scene, options: dict, render_distance: int = 1, aspects: dict = {}, chunks: dict={}):
         self._chunks = {}
+        self._scene = scene
         self._active_chunks = set()
-        self._ehandler = EntityHandler(self)
         self._aspects = []
         self._components = {} # comp_hash: {entities} (set)
         self._options = options
@@ -236,17 +236,20 @@ class World:
             for entity in self._chunks[chunk]._intrinstic_entities:
                 yield self._ehandler._entities[entity]
 
+    #== entitiy
     def get_entity(self, entity):
         """Get the entity"""
         return self._ehandler.get_entity(entity)
 
     def add_entity(self, entity):
         """Add an entity to the world"""
-        self._ehandler.register_entity(entity)
+        entity.world = self
+        self._scene.add_entity(entity)
         for comp in entity.components:
             self.add_component(entity, comp)
         # add to chunk
-        self.get_chunk(0, 0)._intrinstic_entities.add(hash(entity))
+        self.get_chunk(entity.position.x // self._options["chunkpixw"], 
+                entity.position.y // self._options["chunkpixh"])._intrinstic_entities.add(entity)
 
     def update_entity_chunk(self, entity, old, new):
         """Update the chunk intrinsic properties for entities"""
@@ -256,6 +259,7 @@ class World:
         nchunk._intrinstic_entities.add(hash(entity))
         entity.c_chunk[0], entity.c_chunk[1] = new
 
+    #== comps
     def add_component(self, entity, component):
         """Add a component to an entity in the world"""
         comp_hash = hash(component)
@@ -268,14 +272,14 @@ class World:
         # component parent = entity
         component._entity = entity
         component.on_add()
-        # print(self._components)
-        
+    
     def remove_component(self, entity, comp_class):
         """Remove a component from an entity"""
         if comp_class.get_hash() in self._components:
             self._components[comp_class.get_hash()].remove(hash(entity))
             entity.components.remove(comp_class.get_hash())
 
+    #== chunks
     def add_chunk(self, chunk_hash: int, chunk):
         """Add chunks to the world"""
         self._chunks[chunk_hash] = chunk
@@ -285,6 +289,7 @@ class World:
         if chunk_hash in self._chunks:
             return self._chunks.pop(chunk_hash)
 
+    #== aspects
     def add_aspect(self, aspect):
         """Add an aspect to the world"""
         aspect._world = self
@@ -312,22 +317,6 @@ class World:
                 del i._world
                 self._aspects.remove(i)
 
-    def update(self):
-        """Update the world"""
-        # == update chunks
-        for i in self._active_chunks:
-            self._chunks[i].update()
-        # for i in self._chunks.values():
-        #     i.update()
-        # == update aspects
-        for aspect in self._aspects:
-            aspect.handle()
-        # TODO - do I want to stick with this??? 
-        # keep chunks --> they update entities!
-        
-        # == initialize new entities
-        self._ehandler.initialize_entities_at_end_of_update()
-
     def handle_aspects(self):
         """Handle the aspects"""
         for i in self._aspects:
@@ -341,6 +330,15 @@ class World:
             aspect_time = int(round((soragl.SoraContext.get_time() - st) * 1000, 3))
             self.aspect_times[i.__class__.__name__] = aspect_time
 
+    #== update
+    def update(self):
+        """Update the world"""
+        # == update chunks
+        for i in self._active_chunks:
+            self._chunks[i].update()
+        # == update aspects
+        self.handle_aspects()
+
     def clear_world(self):
         """Clear all chunks + entities + aspects + processors"""
         self._chunks.clear()
@@ -351,6 +349,8 @@ class World:
         """Clear the cache"""
         self._components.clear()
 
+    def __hash__(self):
+        return id(self)
 
 # ------------------------------ #
 # scene
@@ -360,19 +360,39 @@ class Scene:
 
     def __init__(self, config: dict = None):
         """Create a scene object"""
-        # private
+        #=== private
         self._layers = []
         self._config = config if config else load_config(Scene.DEFAULT_CONFIG)
 
-        # public
-        self.priority = 0
+        # adding entities
+        self._global_entities = {}
+        self._new_entities = set()
     
-    def add_layer(self, layer: World, priority: int = 0):
+    def make_layer(self, config: dict, priority: int = 0, **kwargs):
         """Add a layer to the scene"""
+        layer = World(self, config, priority, **kwargs)
         layer.priority = priority
         self._layers.append(layer)
         self._layers.sort(key=lambda x: x.priority, reverse=True)
+        return layer
     
+    def add_entity(self, entity):
+        """Add an entity to the scene"""
+        entity.scene = self
+        self._global_entities[hash(entity)] = entity
+        self._new_entities.add(entity)
+    
+    def remove_entity(self, entity):
+        """Remove an entity from the scene"""
+        if hash(entity) in self._global_entities:
+            del self._global_entities[hash(entity)]
+    
+    def get_entity(self, entity_hash: int):
+        """Get an entity from the scene"""
+        if entity_hash in self._global_entities:
+            return self._global_entities[entity_hash]
+        return None
+
     def remove_layer(self, layer: World):
         """Remove a layer from the scene"""
         self._layers.remove(layer)
@@ -386,6 +406,12 @@ class Scene:
         # update layers
         for layer in self._layers:
             layer.update()
+        # add new entities
+        buf = tuple(self._new_entities)
+        print(buf) if buf else None
+        self._new_entities.clear()
+        for pack in buf:
+            pack.on_ready()
 
 # ------------------------------ #
 

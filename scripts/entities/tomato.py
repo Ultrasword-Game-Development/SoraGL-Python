@@ -15,7 +15,7 @@ Tomato - Sprite Testing
 # class
 
 class Tomato(physics.Entity):
-    SPEED = 40
+    SPEED = 20
     LERP = 0.3
 
     def __init__(self, position: tuple):
@@ -30,10 +30,7 @@ class Tomato(physics.Entity):
         """
         self.add_component(base_objects.AnimatedSprite(0, 0, self.registry))
         self.add_component(base_objects.SpriteRenderer())
-        self.add_component(base_objects.MovementComponent())
-        # self.add_component(physics.Box2D(10, 10, degrees=0))
-        self.add_component(physics.AABB(10, 10))
-        self.add_component(base_objects.Collision2DComponent(16, 16))
+        self.add_component(base_objects.Collision2DComponent())
 
     def update(self):
         """Update the tomato"""
@@ -50,6 +47,8 @@ class Tomato(physics.Entity):
             self.velocity += physics.UP * self.SPEED
         if soragl.SoraContext.is_key_pressed(pygame.K_s):
             self.velocity += physics.DOWN * self.SPEED
+        if soragl.SoraContext.is_key_pressed(pygame.K_SPACE):
+            self.physics_comp._angle += 1
         
 
 

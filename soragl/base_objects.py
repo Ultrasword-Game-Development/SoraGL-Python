@@ -27,37 +27,6 @@ class MissingComponent(Exception):
 # ------------------------------------------------------------ #
 
 # ------------------------------ #
-# movement 
-class MovementComponent(scene.Component):
-    def __init__(self):
-        super().__init__()
-
-# aspect
-class MovementAspect(scene.Aspect):
-    def __init__(self):
-        super().__init__(MovementComponent, 20)
-        self.priority = 5
-        # print("created movement aspect", self.priority)
-    
-    def handle(self):
-        """Handle movement for entities"""
-        for e in self.iterate_entities():
-            # just move entities first
-            # comp = e.get_component_from_hash(self._target)
-            # handle movement
-            e.position += e.velocity * soragl.SoraContext.DELTA
-            # push object towards position
-            e.rect.center = e.position.xy
-
-            # handle if leaving chunk
-            cx = e.rect.centerx // e.world._options["chunkpixw"]
-            cy = e.rect.centery // e.world._options["chunkpixh"]
-            if cx != e.c_chunk[0] or cy != e.c_chunk[1]:
-                # update chunk data
-                self._world.update_entity_chunk(e, e.c_chunk, (cx, cy))
-
-
-# ------------------------------ #
 # sprite
 # NOTE: sprite / animated sprite must be added before renderer!
 
@@ -187,50 +156,15 @@ class SpriteRendererAspectDebug(scene.Aspect):
 # ------------------------------ #
 # collision2d
 class Collision2DComponent(scene.Component):
-    # square
-    DEFAULT = {
-        "mass": 1, 
-        "hardness": 1.0, # hardness
-    }
-
-    TARGETS = [physics.AABB, physics.Box2D]
-
-    def __init__(self, mass: float = 1, hardness: float = 1.0, offset: list = None):
+    def __init__(self, offset: list = None):
         super().__init__()
         # private
         self._offset = pgmath.Vector2(offset) if offset else pgmath.Vector2(0, 0)
-        # other arguments
-        self._mass = mass
-        self._area = 0
-        self._density = 0
-        self._hardness = hardness
-        self._shape = None
-        # public 
-        self._force = pgmath.Vector2()
+        self._rect = None
 
     def on_add(self):
         """On add"""
-        for t in Collision2DComponent.TARGETS:
-            if self._entity.entity_has_component(t):
-                self._shape = self._entity.get_component(t)
-                break
-        if not self._shape:
-            raise MissingShape("Shape is not an added component to: ", self._entity)
-        # print(self._shape)
-        self._area = self._shape._rect.w * self._shape._rect.h
-        self._density = self._area / self._mass
-
-    @property
-    def area(self):
-        """Get the area"""
-        return (self.width, self.height)
-    
-    @area.setter
-    def area(self, new_area: tuple):
-        """set a new area"""
-        if len(new_area) != 2:
-            raise NotImplementedError(f"The area {new_area} is not supported yet! {__file__} {__package__}")
-        self.width, self.height = new_area
+        self._rect = self._entity.rect
 
     def get_relative_position(self):
         """Get the relative position"""
@@ -240,14 +174,21 @@ class Collision2DComponent(scene.Component):
         """Get the offset"""
         return self._offset
 
-    @property
-    def force(self):
-        """Get the force"""
-        return self._force
+    def get_vertices(self):
+        """Iterator for vertices"""
+        return [self._entity.position + self._entity._rect.topleft - self._entity._rect.center, self._entity.position + self._entity._rect.topright - self._entity._rect.center, self._entity.position + self._entity._rect.bottomright - self._entity._rect.center, self._entity.position + self._entity._rect.bottomleft - self._entity._rect.center]
 
-    def apply_force(self, force: pgmath.Vector2):
-        """Apply a force to the component"""
-        self._force += force
+    @property
+    def area(self):
+        """Get the area"""
+        return (self.rect.w, self.rect.h)
+    
+    @area.setter
+    def area(self, new_area: tuple):
+        """set a new area"""
+        if len(new_area) != 2:
+            raise NotImplementedError(f"The area {new_area} is not supported yet! {__file__} {__package__}")
+        self.rect.w, self.rect.h= new_area
 
 # aspect
 class Collision2DAspect(scene.Aspect):
@@ -256,70 +197,23 @@ class Collision2DAspect(scene.Aspect):
         super().__init__(Collision2DComponent)
         self.priority = 19
         # private
-        self._collisions = []
-        self._cache = set()
         self._handler_aspect = None # to be set after in 'on_add' of the collision2dhandleraspect
 
-    def handle_collision_check(self, a, b) -> bool:
-        """Check if there are collisions"""
-        # grab the collision components
-        ac = a.get_component(Collision2DComponent)
-        bc = b.get_component(Collision2DComponent)
-        acol = ac._shape
-        bcol = bc._shape
-        # check if there is a collision along x and y axis
-        return physics.check_overlap(acol, bcol, physics.RIGHT) and physics.check_overlap(acol, bcol, physics.UP)
-        
-    def resolve_collisions(self):
-        """Handle the collision
-
-        Find a = axis of collision
-        - then using momentum equation:
-        - since momentum conserved in 'a'
-        - then solve for resulting velocities! in the other axis! (b = perp to a)
-        
-        find the right function to handle collision :D
+    def handle_movement(self, entity):
+        """Handle the movement of the entity"""
         """
-        for col in self._collisions:
-            # print(col)
-            # check if the collision is already in the cache
-            if col in self._cache: continue
-            # add the collision to the cache
-            self._cache.add(col)
-            # call resolve collision
-            physics.resolve_collision(col)
+        move in x
+        move in y
+        check col both -- resolve col in both
 
-    def update_projected_position(self):
-        """Update the projected position of the entities"""
-        # update all entity positions first
-        for e in self.iterate_entities():
-            e._projected_position = e.position + e.velocity * soragl.SoraContext.DELTA
-
-    def find_projected_collisions(self):
-        """Find the projected collisions"""
-        for e1 in self.iterate_entities():
-            for e2 in self.iterate_entities():
-                if e1 == e2: continue
-                # handle collision checking
-                if self.handle_collision_check(e1, e2):
-                    physics.resolve_collision(physics.Collision(e1, e2))
-
-    def update_final_positions(self):
-        """Update the final positions of the entities"""
-        for e in self.iterate_entities():
-            e.position = e._projected_position
+        update rect pos
+        update chunk pos
+        """
+        pass
 
     def handle(self):
         """Handle Collisions for Collision2D Components"""
-        # update projected positions
-        self.update_projected_position()
-        # find collisions of projected entities
-        self.find_projected_collisions()
-        # update final positions
-        self.update_final_positions()
-        # clear cache
-        self._collisions.clear()
-        self._cache.clear()
+        pass
 
 
 # ------------------------------ #
@@ -329,48 +223,9 @@ class Collision2DRendererAspectDebug(Collision2DAspect):
     def __init__(self):
         super().__init__()
 
-    def find_projected_collisions(self):
-        """Find the projected collisions"""
-        for e1 in self.iterate_entities():
-            # debug comps
-            c1 = e1.get_component(Collision2DComponent)
-            pos = c1.get_relative_position()
-            # draw collision area
-            pgdraw.rect(soragl.SoraContext.FRAMEBUFFER, (255, 0, 0), pgRect(pos - (c1._shape._rect.w/2, c1._shape._rect.h/2), (c1._shape._rect.w, c1._shape._rect.h)), 1)
-            # loop entitites
-            for e2 in self.iterate_entities():
-                if e1 == e2: continue
-                # handle collision checking
-                self.handle_collision_check(e1, e2)
-                
-                c2 = e2.get_component(Collision2DComponent)
-                # draw a line between the two entities
-                center = (e1.position + e2.position) / 2
-                if not e1.position - e2.position: continue
-                dvec = (e1.position - e2.position).normalize()
-                rdvec = dvec.rotate(90)
-                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 255, 0), 
-                            center + rdvec * 10, center - rdvec * 10, 1)
-                # some more art for support calculations
-                rxpos = max(e1.position.x, e2.position.x)
-                rypos = max(e1.position.y, e2.position.y)
-                # 2 lines for x and y axis
-                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 255, 0),
-                            (rxpos, e1.position.y), (rxpos, e2.position.y), 1)
-                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 255, 0),
-                            (e1.position.x, rypos), (e2.position.x, rypos), 1)
-                # draw support lines
-                e1s, e1is = c1._shape.get_support(dvec), c1._shape.get_isupport(dvec)
-                e2s, e2is = c2._shape.get_support(dvec), c2._shape.get_isupport(dvec)
-                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 100, 100),
-                            e1s, (e1s.x, rypos), 1)
-                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 100, 100),
-                            e2s, (e2s.x, rypos), 1)
-                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 100, 100),
-                            e1s, (rxpos, e1s.y), 1)
-                pgdraw.line(soragl.SoraContext.DEBUGBUFFER, (0, 100, 100),
-                            e2s, (rxpos, e2s.y), 1)
-
+    def handle(self):
+        """Render the collision areas"""
+        pass
 
 # ------------------------------------------------------------ #
 # particle system

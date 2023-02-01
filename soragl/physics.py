@@ -33,6 +33,7 @@ class Entity:
     def __init__(self):
         # defined after register
         self.world = None
+        self.scene = None
         self.handler = None
 
         # private
@@ -100,398 +101,45 @@ class Entity:
 
 
 # ------------------------------------------------------------ #
-# collision data
+# SAT - check if colliding objects
 # ------------------------------------------------------------ #
+# checking for collisions
 
-class Collision:
-    def __init__(self, ec1, ec2):
-        """Create a collision object"""
-        entity1, entity2 = ec1._entity, ec2._entity
-        # private
-        h1, h2 = hash(entity1), hash(entity2)
-        self._id_sum = (min(h1, h2) << 16) + max(h1, h2)
+def is_separated(shape1, shape2, axis: pgmath.Vector2) -> bool:
+    """Return True if the shapes are separated along the given axis"""
+    proj1 = [axis.dot(vertex) for vertex in shape1]
+    proj2 = [axis.dot(vertex) for vertex in shape2]
+    min_proj1, max_proj1 = min(proj1), max(proj1)
+    min_proj2, max_proj2 = min(proj2), max(proj2)
+    return max_proj1 < min_proj2 or min_proj1 > max_proj2
 
-        # public
-        self.entity1 = entity1
-        self.entity2 = entity2
-        self.shape1 = ec1
-        self.shape2 = ec2
-        self.dvec = self.entity1.position - self.entity2.position
-        self.collisiontype = (hash(ec1.__class__), hash(ec2.__class__))
-        self.intersect1 = (get_interval(self.shape1, RIGHT), get_interval(self.shape1, UP))
-        self.intersect2 = (get_interval(self.shape2, RIGHT), get_interval(self.shape2, UP))
-        # the rest of the data is to be calculated
+def overlap_general(shape1_, shape2_) -> bool:
+    """Check if two objects overlap -- axis not used"""
+    shape1 = list(shape1_.get_vertices())
+    shape2 = list(shape2_.get_vertices())
 
-    
-    def get_intersects(self):
-        """Get the intersects of the collision"""
-        yield self.intersect1[0], self.intersect2[0]
-        yield self.intersect1[1], self.intersect2[1]
+    # Test all the normals (edge directions) of shape1
+    for i in range(len(shape1)):
+        edge = shape1[i] - shape1[i-1]
+        axis = pgmath.Vector2(-edge.y, edge.x).normalize()
+        if is_separated(shape1, shape2, axis):
+            return False
 
-    def __hash__(self):
-        """Overload the 'id' operator"""
-        return self._id_sum
+    # Test all the normals (edge directions) of shape2
+    for i in range(len(shape2)):
+        edge = shape2[i] - shape2[i-1]
+        axis = pgmath.Vector2(-edge.y, edge.x).normalize()
+        if is_separated(shape1, shape2, axis):
+            return False
 
+    # If no separations were found, the shapes are intersecting
+    return True
 
-# ------------------------------------------------------------ #
-# collision objects
-# ------------------------------------------------------------ #
+# moving entities in world
 
-class CollisionShape(scene.Component):
-    COLLISIONSHAPE = True
-
-    def __init__(self):
-        super().__init__()
-    
-    def iterate_vertices(self):
-        yield (0, 0)
-    
-    def iterate_vertices_relative(self):
-        """Iteratore for relative vertices"""
-        for v in self.iterate_vertices():
-            yield self._entity.position + v
-    
-    def iterate_vertices_relative_projected(self):
-        """Iterator for projected relative vertices"""
-        for v in self.iterate_vertices_relative():
-            yield self._entity._projected_position + v
-
-    def get_vertices(self):
-        """Get the vertices of the box"""
-        return list(self.iterate_vertices())
-    
-    def get_support(self, dvec: pgmath.Vector2):
-        """Get the support vector - position - greatest dis point from an axis"""
-        highest = -1e9
-        support = pgmath.Vector2()
-        for v in self.get_vertices():
-            dot = dvec.dot(v)
-            if dot > highest:
-                highest = dot
-                support = v
-        return support
-    
-    def get_isupport(self, dvec: pgmath.Vector2):
-        """Get the reverse support vector - position - lowest dis from an axis"""
-        lowest = 1e9
-        support = pgmath.Vector2()
-        for v in self.get_vertices():
-            dot = dvec.dot(v+self._entity.position)
-            if dot < lowest:
-                lowest = dot
-                support = v
-        return support
-
-    def get_projected_vertices(self):
-        """Get the projected vertices of the box"""
-        return [self._entity._projected_position + v for v in self.iterate_vertices()]
-    
-    def get_projected_support(self, dvec: pgmath.Vector2):
-        """Get the projected support vector - position - greatest dis point from an axis"""
-        highest = -1e9
-        support = pgmath.Vector2()
-        for v in self.get_projected_vertices():
-            dot = dvec.dot(v)
-            if dot > highest:
-                highest = dot
-                support = v
-        return support
-    
-    def get_projected_isupport(self, dvec: pgmath.Vector2):
-        """Get the projected reverse support vector - position - lowest dis from an axis"""
-        lowest = 1e9
-        support = pgmath.Vector2()
-        for v in self.get_projected_vertices():
-            dot = dvec.dot(v)
-            if dot < lowest:
-                lowest = dot
-                support = v
-        return support
-
-
-class ConvexShape(CollisionShape):
-    @classmethod
-    def quickhull(cls, points):
-        """Generate a convex hull from a list of points"""
-        # worse case O(nlog(r)) time
-        # n = number of input
-        # r = num of processed
-        hull = []
-        # step 1: find points with min and max x coordinates
-        points.sort(key=lambda p: (p.x, p.y))
-        pmin, pmax = points[0], points[-1]
-        result += [pmin, pmax]
-        # step 2: split into 2 sections
-        line = pmax - pmin
-        s1, s2 = [], []
-        for p in points:
-            # determine if left or right of line
-            c = line.cross(p)
-            s1.append(p) if c > 0 else s2.append(p)
-        # find hull
-        cls.findhull(s1, pmin, pmax)
-        cls.findhull(s2, pmax, pmin)
-        return hull
-
-    @classmethod
-    def findhull(cls, points, p1, p2):
-        """Find the convex hull of a set of points"""
-        # base case
-        if not points:
-            return
-        # find furthest point from: sample point
-        line = p2 - p1
-        p3 = max(points, key=lambda p: line.cross(p))
-        # split into 3 subsets
-        l1 = p3 - p1
-        l2 = p2 - p3
-        # find points inside
-        i = 0
-        s0, s1, s2 = [], [], []
-        for p in points:
-            # if inside
-            if p.x < p3.x and l1.cross(p) > 0:
-                s1.append(p)
-            elif p.x > p3.x and l2.cross(p) > 0:
-                s2.append(p)
-            else:
-                s0.append(p)
-        print(s0, s1, s2)
-
-    # https://en.wikipedia.org/wiki/Convex_hull
-    # https://en.wikipedia.org/wiki/Quickhull#Pseudocode_for_2D_set_of_points
-    # ------------------------------ #
-
-    def __init__(self):
-        super().__init__()
-
-
-
-"""
-https://www.toptal.com/game/video-game-physics-part-ii-collision-detection-for-solid-objects
-TODO:
-1. suports
-2. aabb vs aabb / aabb vs box2d
-3. circles + aabb / circles + box2d
-4. box2d + box2d
-5. minkowski sums! + differences
-6. simplexes!
-7. gjk algorithm!
-8. penetration stuff
-9. collision handling / resolving
-10. ez
-"""
-
-
-class AABB(CollisionShape):
-    """
-    AABB = square that moves --> no rotation
-    """
-    def __init__(self, width: int, height: int, offx: int = 0, offy: int = 0):
-        super().__init__()
-        self._rect = pRect(offx, offy, width, height)
-    
-    def iterate_vertices(self):
-        """Iterator for vertices"""
-        yield self._entity.position + self._rect.topleft
-        yield self._entity.position + self._rect.topright
-        yield self._entity.position + self._rect.bottomleft
-        yield self._entity.position + self._rect.bottomright
-
-
-class Box2D(CollisionShape):
-    """
-    Box2D = square that moves + rotation
-    """
-    def __init__(self, width: int, height: int, offx: int = 0, offy: int = 0, degrees: float = 0):
-        super().__init__()
-        self._rect = pRect(offx, offy, width, height)
-        self._angle = degrees
-        self._center = self._rect.center
-    
-    @property
-    def angle(self):
-        """Angle property"""
-        return self._angle
-    
-    @angle.setter
-    def angle(self, value):
-        """Angle setter"""
-        self._angle = value
-
-    @property
-    def center(self):
-        """Center property"""
-        return self._center
-    
-    @center.setter
-    def center(self, value):
-        """Center setter"""
-        self._center = value
-
-    def iterate_vertices(self):
-        """Iterator for rotated vertices"""
-        # get the center of the rectangle
-        center = pgmath.Vector2(self._rect.centerx, self._rect.centery)
-
-        # get the vertices
-        vertices = [
-            pgmath.Vector2(self._rect.topleft) - center,
-            pgmath.Vector2(self._rect.topright) - center,
-            pgmath.Vector2(self._rect.bottomleft) - center,
-            pgmath.Vector2(self._rect.bottomright) - center
-        ]
-
-        # rotate each vertex around the center
-        for vertex in vertices:
-            yield vertex.rotate(self._angle) + self._entity.position
-
-
-# ------------------------------------------------------------ #
-# SAT helper functions
-# ------------------------------------------------------------ #
-
-# interval functions
-# https://github.com/codingminecraft/MarioYoutube/blob/265780291acc7693816ff2723c227ae89a171466/src/main/java/physics2d/rigidbody/IntersectionDetector2D.java
-# sat calculations sorta
-
-INTERVAL_FUNC = {}
-
-def get_interval(comp, axis):
-    """Get the interval of a component"""
-    global INTERVAL_FUNC
-    return INTERVAL_FUNC[hash(comp.__class__)](comp, axis)
-
-def register_interval_function(comp_class, func):
-    """Register an interval function"""
-    global INTERVAL_FUNC
-    INTERVAL_FUNC[hash(comp_class)] = func
-
-# ------------------------------ #
-# interval functions
-
-def project_point_to_axis(point, axis):
-    """Project a point onto an axis"""
-    return axis.rotate(90).dot(point)
-
-def get_interval(comp, axis):
-    """Get the interval of an AABB"""    
-    result = pgmath.Vector2(0, 0)
-    # axis.rotate_ip(90)
-    points = comp.get_vertices()
-    result.x = project_point_to_axis(points[0], axis)
-    result.y = result.x
-    for point in points[1:]:
-        # ang = axis.angle_to(point)
-        projection = project_point_to_axis(point, axis)
-        if projection < result.x:
-            result.x = projection
-        if projection > result.y:
-            result.y = projection
-    return result
-
-
-# ------------------------------------------------------------ #
-# overlapping axis
-# ------------------------------------------------------------ #
-
-OVERLAP_FUNC = {}
-
-def check_overlap(a, b, axis):
-    """Check if two objects overlap on an axis"""
-    # print(OVERLAP_FUNC)
-    return OVERLAP_FUNC[(hash(a.__class__), hash(b.__class__))](a, b, axis)
-
-
-def register_overlap_function(comp_class_a, comp_class_b, func):
-    """Register an overlap function"""
-    OVERLAP_FUNC[(hash(comp_class_a), hash(comp_class_b))] = func
-    OVERLAP_FUNC[(hash(comp_class_b), hash(comp_class_a))] = func
-
-
-# ------------------------------ #
-# overlap functions
-
-def overlap_AABBtoAABB(a, b, axis):
-    """Check if two objects overlap on an axis"""
-    # project points onto an axis then compare
-    i1 = get_interval(a, axis)
-    i2 = get_interval(b, axis)
-    # print(id(a), id(b), i1, i2, end=" | ")
-    return i1.x <= i2.y and i2.x <= i1.y
-
-# def overlap_AABBtoBox2D(a, b, axis):
-#     """Check if two objects overlap on an axis"""
-#     # project points onto an axis then compare
-#     i1 = get_interval(a, axis)
-#     i2 = get_interval(b, axis)
-#     return i1.x <= i2.y and i2.x <= i1.y
-
-# def overlap_Box2DtoBox2D(a, b, axis):
-#     """Check if two objects overlap on an axis"""
-#     # project points onto an axis then compare
-#     i1 = get_interval(a, axis)
-#     i2 = get_interval(b, axis)
-#     return i1.x <= i2.y and i2.x <= i1.y
-
-
-# ------------------------------ #
-# register!
-
-register_overlap_function(AABB, AABB, overlap_AABBtoAABB)
-register_overlap_function(AABB, Box2D, overlap_AABBtoAABB)
-register_overlap_function(Box2D, Box2D, overlap_AABBtoAABB)
-
-
-# ------------------------------------------------------------ #
-# handle collisions
-# ------------------------------------------------------------ #
-
-HANDLE_FUNC = {}
-
-def register_handle_function(comp_class_a, comp_class_b, func):
-    """Register a collision function"""
-    HANDLE_FUNC[(hash(comp_class_a), hash(comp_class_b))] = func
-    HANDLE_FUNC[(hash(comp_class_b), hash(comp_class_a))] = func
-
-
-def resolve_collision(collision):
-    """Resolve a collision between two objects"""
-    return HANDLE_FUNC[collision.collisiontype](collision)
-
-# ------------------------------ #
-# resolving function
-
-def handle_AABBtoAABB(collision):
-    """Handle a collision between two AABBs"""
-    a, b = collision.entity1, collision.entity2
-    _a, _b = collision.shape1, collision.shape2
-    # find center of the collision
-    distance = a.position - b.position
-    center = distance / 2
-    # get distance between the support fo (left) and rsuppoert for (b)
-    left, right = (a, _a), (b, _b)
-    if collision.interval1.x < collision.interval2.x:
-        left, right = (b, _b), (a, _a)
-    # get the mtv
-    mtv = left[1].get_support(distance) - right[1].get_isupport(distance)
-    tv = mtv / 2
-
-    print(tv)
-    
-    # move the objects
-    left[0].position -= tv
-    right[0].position += tv
-
-def handle_AABBtoBox2D(collision):
+def move_entity(scene, entity):
+    """Move an entity in the world"""
     pass
-
-# register the functions
-
-register_handle_function(AABB, AABB, handle_AABBtoAABB)
-
-register_handle_function(AABB, AABB, handle_AABBtoAABB)
-register_handle_function(AABB, Box2D, handle_AABBtoBox2D)
 
 # ------------------------------------------------------------ #
 # particle handling + physics

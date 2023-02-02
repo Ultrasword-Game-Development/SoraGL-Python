@@ -48,6 +48,7 @@ class Entity:
         self.position = pgmath.Vector2()
         self.velocity = pgmath.Vector2()
         self.rect = pRect(0, 0, 0, 0)
+        self.static = False
 
     # whenever components are added -- the world must be queried --> so that cache can be updated
     def on_ready(self):
@@ -55,6 +56,7 @@ class Entity:
         # print(self)
         pass
 
+    #=== components
     @property
     def components(self) -> dict:
         """Components property"""
@@ -79,18 +81,33 @@ class Entity:
         """Get a component from the entity"""
         return self.get_component_from_hash(hash(comp_class))
 
-    def update(self):
-        """Default update function"""
-        pass
-    
     def entity_has_component(self, comp_class):
         """Check if an entity has a component"""
         return hash(comp_class) in self._components
+
+    #=== default functions
+    def update(self):
+        """Default update function"""
+        pass
 
     def kill(self):
         """Kill the entity"""
         self._alive = False
 
+    #=== values / setters / getters
+    @property
+    def area(self):
+        """Get the area"""
+        return (self.rect.w, self.rect.h)
+    
+    @area.setter
+    def area(self, new_area: tuple):
+        """set a new area"""
+        if len(new_area) != 2:
+            raise NotImplementedError(f"The area {new_area} is not supported yet! {__file__} {__package__}")
+        self.rect.w, self.rect.h= new_area
+    
+    #=== standard overloads
     def __eq__(self, o):
         """Overload the == operator"""
         return id(self) == id(o)
@@ -105,6 +122,13 @@ class Entity:
 # ------------------------------------------------------------ #
 # checking for collisions
 
+"""
+SAT code
+- to be used when implementing box2d + movement + polygonal objects in game!
+TODO:
+- figure out how to do the above :)
+"""
+
 def is_separated(shape1, shape2, axis: pgmath.Vector2) -> bool:
     """Return True if the shapes are separated along the given axis"""
     proj1 = [axis.dot(vertex) for vertex in shape1]
@@ -117,6 +141,7 @@ def overlap_general(shape1_, shape2_) -> bool:
     """Check if two objects overlap -- axis not used"""
     shape1 = list(shape1_.get_vertices())
     shape2 = list(shape2_.get_vertices())
+    # TODO: perhaps integrate the AABB for none AABB shapes
 
     # Test all the normals (edge directions) of shape1
     for i in range(len(shape1)):
@@ -135,11 +160,6 @@ def overlap_general(shape1_, shape2_) -> bool:
     # If no separations were found, the shapes are intersecting
     return True
 
-# moving entities in world
-
-def move_entity(scene, entity):
-    """Move an entity in the world"""
-    pass
 
 # ------------------------------------------------------------ #
 # particle handling + physics

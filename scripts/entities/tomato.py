@@ -23,6 +23,7 @@ class Tomato(physics.Entity):
         self.registry = animation.Category.get_category_framedata("assets/sprites/tomato.json")["idle"].get_registry()
         # ------------------------------ #
         self.position += position
+        self.area = (16, 16)
 
     def on_ready(self):
         """

@@ -99,9 +99,7 @@ class Chunk:
         
         # public
         cpw, cph = options["chunkpixw"], options["chunkpixh"]
-        self.area = pygame.Rect(x * cpw, y * cph, (x+1) * cpw, (y+1) * cph)
-        # print(self.area)
-        # print(self._hash)
+        self.rect = pygame.Rect(x * cpw, y * cph, (x+1) * cpw, (y+1) * cph)
 
     def __hash__(self):
         """Hash the chunk"""
@@ -112,9 +110,9 @@ class Chunk:
         # update all intrinstic entities
         for entity in self._intrinstic_entities:
             self._world._scene._global_entities[entity].update()
-        # debug update
-        if soragl.SoraContext.DEBUG:
-            pygame.draw.rect(soragl.SoraContext.FRAMEBUFFER, (255, 0, 0), self.area, 1)
+        # # debug update
+        # if soragl.SoraContext.DEBUG:
+        #     pygame.draw.rect(soragl.SoraContext.FRAMEBUFFER, (255, 0, 0), self.area, 1)
 
 
 # ------------------------------ #
@@ -154,7 +152,6 @@ class ComponentHandler:
         """Register the component"""
         if comp.__class__.__name__ not in cls.COMPONENTS:
             cls.COMPONENTS[comp.__class__.__name__] = comp.__class__
-
 
 class Component:
     def __init__(self, loaded_hash: int = None):
@@ -210,32 +207,6 @@ class World:
         # update active chunks
         self.set_center_chunk(0, 0)
 
-    def set_center_chunk(self, x: int, y: int):
-        """Set the center chunk for rendering"""
-        self._center_chunk[0] = x
-        self._center_chunk[1] = y
-        # update active chunks
-        self._active_chunks.clear()
-        for i in range(self._center_chunk[0] - self.render_distance, self._center_chunk[0] + self.render_distance + 1):
-            for j in range(self._center_chunk[1] - self.render_distance, self._center_chunk[1] + self.render_distance + 1):
-                self._active_chunks.add(hash(self.get_chunk(i, j)))
-
-    def get_chunk(self, x: int, y: int):
-        """Get the chunk"""
-        x, y = int(x), int(y)
-        f = hash(f"{x}-{y}")
-        if f in self._chunks:
-            return self._chunks[f]
-        c = Chunk(x, y, self, self._options)
-        self._chunks[hash(c)] = c
-        return c
-
-    def iter_active_entities(self):
-        """Iterate through the active entities"""
-        for chunk in self._active_chunks:
-            for entity in self._chunks[chunk]._intrinstic_entities:
-                yield self._scene._global_entities[entity]
-
     #== entitiy
     def get_entity(self, entity):
         """Get the entity"""
@@ -260,6 +231,12 @@ class World:
         ochunk._intrinstic_entities.remove(hash(entity))
         nchunk._intrinstic_entities.add(hash(entity))
         entity.c_chunk[0], entity.c_chunk[1] = new
+
+    def iter_active_entities(self):
+        """Iterate through the active entities"""
+        for chunk in self._active_chunks:
+            for entity in self._chunks[chunk]._intrinstic_entities:
+                yield self._scene._global_entities[entity]
 
     #== comps
     def add_component(self, entity, component):
@@ -290,6 +267,26 @@ class World:
         """Remove a chunk"""
         if chunk_hash in self._chunks:
             return self._chunks.pop(chunk_hash)
+
+    def set_center_chunk(self, x: int, y: int):
+        """Set the center chunk for rendering"""
+        self._center_chunk[0] = x
+        self._center_chunk[1] = y
+        # update active chunks
+        self._active_chunks.clear()
+        for i in range(self._center_chunk[0] - self.render_distance, self._center_chunk[0] + self.render_distance + 1):
+            for j in range(self._center_chunk[1] - self.render_distance, self._center_chunk[1] + self.render_distance + 1):
+                self._active_chunks.add(hash(self.get_chunk(i, j)))
+
+    def get_chunk(self, x: int, y: int):
+        """Get the chunk"""
+        x, y = int(x), int(y)
+        f = hash(f"{x}-{y}")
+        if f in self._chunks:
+            return self._chunks[f]
+        c = Chunk(x, y, self, self._options)
+        self._chunks[hash(c)] = c
+        return c
 
     #== aspects
     def add_aspect(self, aspect):

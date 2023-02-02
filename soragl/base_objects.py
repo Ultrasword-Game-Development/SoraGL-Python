@@ -30,13 +30,10 @@ class MissingComponent(Exception):
 # sprite
 # NOTE: sprite / animated sprite must be added before renderer!
 
-# exception
 class MissingSprite(Exception):
     def __init__(self, *args):
         super().__init__(*args)
 
-
-# sprite
 class Sprite(scene.Component):
     def __init__(self, width: int, height: int, sprite = None):
         super().__init__()
@@ -76,7 +73,6 @@ class Sprite(scene.Component):
         self.width, self.height = new_area
         self.sprite = soragl.SoraContext.scale_image(self.sprite, (self.width, self.height))
 
-# animated sprite
 class AnimatedSprite(Sprite):
     def __init__(self, width: int, height: int, registry):
         super().__init__(width, height, registry.get_frame())
@@ -102,7 +98,6 @@ class AnimatedSprite(Sprite):
         """Get the area"""
         return self._registry.get_frame().get_size()
 
-# renderer
 class SpriteRenderer(scene.Component):
     def __init__(self):
         super().__init__()
@@ -118,7 +113,6 @@ class SpriteRenderer(scene.Component):
             self._sprite = self._entity.get_component(AnimatedSprite)
         # print(self._sprite)
 
-# aspect
 class SpriteRendererAspect(scene.Aspect):
     def __init__(self):
         super().__init__(SpriteRenderer)
@@ -135,7 +129,6 @@ class SpriteRendererAspect(scene.Aspect):
             # render the sprite
             soragl.SoraContext.FRAMEBUFFER.blit(c_sprite.sprite, pos - (c_sprite.hwidth, c_sprite.hheight))
 
-# debug aspect
 class SpriteRendererAspectDebug(scene.Aspect):
     def __init__(self):
         super().__init__(SpriteRenderer)
@@ -150,12 +143,12 @@ class SpriteRendererAspectDebug(scene.Aspect):
             if not c_sprite or not c_sprite.sprite: continue
             # print(c_sprite)
             # render the sprite
-            soragl.SoraContext.FRAMEBUFFER.blit(c_sprite.sprite, e.position - (c_sprite.hwidth, c_sprite.hheight))
-            pgdraw.rect(soragl.SoraContext.DEBUGBUFFER, (0, 0, 255), pgRect(e.position - (c_sprite.hwidth, c_sprite.hheight), c_sprite.sprite.get_size()), 1)
-
+            SORA.FRAMEBUFFER.blit(c_sprite.sprite, e.position - (c_sprite.hwidth, c_sprite.hheight))
+            pgdraw.rect(SORA.DEBUGBUFFER, (0, 0, 255), pgRect(e.position - (c_sprite.hwidth, c_sprite.hheight), c_sprite.sprite.get_size()), 1)
 
 # ------------------------------ #
 # collision2d
+
 class Collision2DComponent(scene.Component):
     def __init__(self, offset: list = None):
         super().__init__()
@@ -166,6 +159,7 @@ class Collision2DComponent(scene.Component):
     def on_add(self):
         """On add"""
         self._rect = self._entity.rect
+        self._rect.center = self._entity.position.xy
 
     def get_relative_position(self):
         """Get the relative position"""
@@ -179,19 +173,6 @@ class Collision2DComponent(scene.Component):
         """Iterator for vertices"""
         return [self._entity.position + self._entity._rect.topleft - self._entity._rect.center, self._entity.position + self._entity._rect.topright - self._entity._rect.center, self._entity.position + self._entity._rect.bottomright - self._entity._rect.center, self._entity.position + self._entity._rect.bottomleft - self._entity._rect.center]
 
-    @property
-    def area(self):
-        """Get the area"""
-        return (self.rect.w, self.rect.h)
-    
-    @area.setter
-    def area(self, new_area: tuple):
-        """set a new area"""
-        if len(new_area) != 2:
-            raise NotImplementedError(f"The area {new_area} is not supported yet! {__file__} {__package__}")
-        self.rect.w, self.rect.h= new_area
-
-# aspect
 class Collision2DAspect(scene.Aspect):
 
     def __init__(self):
@@ -212,18 +193,72 @@ class Collision2DAspect(scene.Aspect):
         update rect pos
         update chunk pos
         """
+        vel = (int(entity.velocity.x*100)/100, int(entity.velocity.y*100)/100)
+        # print(vel)
+        # x movement
         entity.position.x += entity.velocity.x * SORA.DELTA
-        # check for x
+        entity.rect.centerx = entity.position.x
+        # check for x collisions
+        for col in self.iterate_collisions(entity.rect):
+            if vel[0] > 0:
+                dif = entity.rect.right - col.rect.left
+                if col.static: 
+                    entity.position.x -= dif
+                else:
+                    col.position.x += math.ceil(dif / 2)
+                    entity.position.x -= dif / 2
+                # update colliding rect
+                col.rect.centerx = col.position.x
+            elif vel[0] < 0:
+                dif = col.rect.right - entity.rect.left
+                if col.static: 
+                    entity.position.x += dif
+                else: 
+                    col.position.x -= math.ceil(dif / 2)
+                    entity.position.x += dif / 2
+                # update colliding rect
+                col.rect.centerx = col.position.x
+                # print(col.rect.right, entity.rect.left)
 
+        # y movement
+        entity.position.y += entity.velocity.y * SORA.DELTA
+        entity.rect.centery = entity.position.y
+        # check for y collisoins
+        for col in self.iterate_collisions(entity.rect):
+            if vel[1] > 0:
+                dif = entity.rect.bottom - col.rect.top
+                if col.static:
+                    entity.position.y -= dif
+                else:
+                    col.position.y -= dif / 2
+                    entity.position.y += math.ceil(dif / 2)
+                # update colliding rect
+                col.rect.centery = col.position.y
+                # entity.position.y -= entity.rect.bottom - col.rect.top
+            elif vel[1] < 0:
+                entity.position.y += col.rect.bottom - entity.rect.top
+        # update rect once more
+        entity.rect.center = entity.position.xy
+
+        # update chunk position -- if moved to new chunk
+        nchunk = [int(entity.position.x) // self._world._options["chunkpixw"],
+                    int(entity.position.y) // self._world._options["chunkpixh"]]
+        if nchunk != entity.c_chunk:
+            # print("new chunK!!!", nchunk, entity.c_chunk)
+            self._world.update_entity_chunk(entity, entity.c_chunk, nchunk)
+
+    def iterate_collisions(self, rect):
+        """Detect all collisions that occur with a certain rect"""
+        for entity in self.iterate_entities():
+            if id(entity.rect) == id(rect): continue
+            # check collision
+            if rect.colliderect(entity.rect):
+                yield entity
 
     def handle(self):
         """Handle Collisions for Collision2D Components"""
-        for entity in self._world.iter_active_entities():
+        for entity in self.iterate_entities():
             self.handle_movement(entity)
-
-
-# ------------------------------ #
-# debug render collision areas
 
 class Collision2DRendererAspectDebug(Collision2DAspect):
     def __init__(self):
@@ -231,7 +266,38 @@ class Collision2DRendererAspectDebug(Collision2DAspect):
 
     def handle(self):
         """Render the collision areas"""
-        pass
+        # print(len(list(self.iterate_entities())))
+        for entity in self.iterate_entities():
+            self.handle_movement(entity)
+            # render debug rect etc
+            # print(entity.rect)
+            pgdraw.rect(SORA.DEBUGBUFFER, (255, 0, 0), entity.rect, 1)
+
+# ------------------------------ #
+# renderable
+
+class Renderable(scene.Component):
+    def __init__(self):
+        super().__init__()
+    
+    def on_add(self):
+        if not 'renderable' in dir(self._entity):
+            raise NotImplementedError(self._entity, "doesn't have `renderable` function")
+
+class RenderableAspect(scene.Aspect):
+    def __init__(self):
+        super().__init__(Renderable)
+        self.priority = 2
+    
+    def handle(self):
+        for e in self.iterate_entities():
+            e.renderable()
+
+# ------------------------------ #
+# ---
+
+
+
 
 # ------------------------------------------------------------ #
 # particle system
@@ -336,7 +402,6 @@ __custom_shape = [
     pgmath.Vector2(-0.8, 0.4),
     pgmath.Vector2(-0.9, 0.15),
     pgmath.Vector2(-1, 0)
-
 ]
 
 

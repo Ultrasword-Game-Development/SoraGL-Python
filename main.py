@@ -93,11 +93,16 @@ scw.add_entity(tomato.Tomato(position=(50, 100)))
 # entity comp
 sce1.add_component(base_objects.Sprite(0, 0, potato))
 sce1.add_component(base_objects.SpriteRenderer())
+sce1.add_component(base_objects.Collision2DComponent())
 sce1.position += (100, 100)
+sce1.area = (20, 20)
+# sce1.static = True
 
 sce2.add_component(base_objects.AnimatedSprite(0, 0, registry))
 sce2.add_component(base_objects.SpriteRenderer())
-sce2.position += (200, 100)
+sce2.position += (40, 100)
+sce2.area = (16, 16)
+# sce2.static = True
 
 # physics
 sce1.add_component(base_objects.Collision2DComponent())
@@ -105,10 +110,11 @@ sce2.add_component(base_objects.Collision2DComponent())
 
 
 # aspects
-scw.add_aspect(base_objects.Collision2DAspect())
-# scw.add_aspect(base_objects.SpriteRendererAspect())
-scw.add_aspect(base_objects.SpriteRendererAspectDebug())
-# scw.add_aspect(base_objects.Collision2DRendererAspectDebug())
+scw.add_aspect(base_objects.SpriteRendererAspect())
+# scw.add_aspect(base_objects.SpriteRendererAspectDebug())
+# scw.add_aspect(base_objects.Collision2DAspect())
+scw.add_aspect(base_objects.Collision2DRendererAspectDebug())
+scw.add_aspect(base_objects.RenderableAspect())
 
 scene.SceneHandler.push_scene(sc)
 

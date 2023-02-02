@@ -271,10 +271,32 @@ class RenderableAspect(scene.Aspect):
 # ---
 
 
+# ------------------------------------------------------------ #
+# world component aspects
+"""
+Contains some aspects -- that act as components
+- do not require an entity to run --> simply run on the world
+"""
+# ------------------------------------------------------------ #
+
+# ------------------------------ #
+# tilemap
+
+class TileMap(scene.Aspect):
+    def __init__(self):
+        super().__init__()
+        self.grid = []
+        # etc -- smth else figure out tmr
+
+
 
 
 # ------------------------------------------------------------ #
 # particle system
+"""
+Particle systems are very cool
+- here are some standard objects!
+"""
 # ------------------------------------------------------------ #
 
 # ------------------------------ #

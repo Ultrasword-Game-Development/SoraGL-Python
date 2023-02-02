@@ -102,7 +102,7 @@ sce2.add_component(base_objects.AnimatedSprite(0, 0, registry))
 sce2.add_component(base_objects.SpriteRenderer())
 sce2.position += (40, 100)
 sce2.area = (16, 16)
-# sce2.static = True
+sce2.static = True
 
 # physics
 sce1.add_component(base_objects.Collision2DComponent())

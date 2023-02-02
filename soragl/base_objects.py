@@ -193,49 +193,23 @@ class Collision2DAspect(scene.Aspect):
         update rect pos
         update chunk pos
         """
-        vel = (int(entity.velocity.x*100)/100, int(entity.velocity.y*100)/100)
-        # print(vel)
         # x movement
         entity.position.x += entity.velocity.x * SORA.DELTA
-        entity.rect.centerx = entity.position.x
+        entity.rect.center = entity.position.xy
         # check for x collisions
         for col in self.iterate_collisions(entity.rect):
-            if vel[0] > 0:
-                dif = entity.rect.right - col.rect.left
-                if col.static: 
-                    entity.position.x -= dif
-                else:
-                    col.position.x += math.ceil(dif / 2)
-                    entity.position.x -= dif / 2
-                # update colliding rect
-                col.rect.centerx = col.position.x
-            elif vel[0] < 0:
-                dif = col.rect.right - entity.rect.left
-                if col.static: 
-                    entity.position.x += dif
-                else: 
-                    col.position.x -= math.ceil(dif / 2)
-                    entity.position.x += dif / 2
-                # update colliding rect
-                col.rect.centerx = col.position.x
-                # print(col.rect.right, entity.rect.left)
-
+            if entity.velocity.x > 0:
+                entity.position.x -= entity.rect.right - col.rect.left
+            elif entity.velocity.x < 0:
+                entity.position.x += col.rect.right - entity.rect.left
         # y movement
         entity.position.y += entity.velocity.y * SORA.DELTA
-        entity.rect.centery = entity.position.y
+        entity.rect.center = entity.position.xy
         # check for y collisoins
         for col in self.iterate_collisions(entity.rect):
-            if vel[1] > 0:
-                dif = entity.rect.bottom - col.rect.top
-                if col.static:
-                    entity.position.y -= dif
-                else:
-                    col.position.y -= dif / 2
-                    entity.position.y += math.ceil(dif / 2)
-                # update colliding rect
-                col.rect.centery = col.position.y
-                # entity.position.y -= entity.rect.bottom - col.rect.top
-            elif vel[1] < 0:
+            if entity.velocity.y > 0:
+                entity.position.y -= entity.rect.bottom - col.rect.top
+            elif entity.velocity.y < 0:
                 entity.position.y += col.rect.bottom - entity.rect.top
         # update rect once more
         entity.rect.center = entity.position.xy
@@ -250,7 +224,7 @@ class Collision2DAspect(scene.Aspect):
     def iterate_collisions(self, rect):
         """Detect all collisions that occur with a certain rect"""
         for entity in self.iterate_entities():
-            if id(entity.rect) == id(rect): continue
+            if id(entity.rect) == id(rect) or not entity.static: continue
             # check collision
             if rect.colliderect(entity.rect):
                 yield entity

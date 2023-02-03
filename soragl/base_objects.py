@@ -182,6 +182,13 @@ class Collision2DAspect(scene.Aspect):
         self.priority = 19
         # private
         self._handler_aspect = None # to be set after in 'on_add' of the collision2dhandleraspect
+        self._tile_map = None
+
+    def on_add(self):
+        """On add"""
+        self._tile_map = self._world.get_aspect(TileMap)
+        if not self._tile_map: self._tile_map = self._world.get_aspect(TileMapDebug)
+        # if not exist then oh well lmao
 
     def handle_movement(self, entity):
         """Handle the movement of the entity"""
@@ -200,10 +207,13 @@ class Collision2DAspect(scene.Aspect):
         entity.rect.center = entity.position.xy
         # check for x collisions
         for col in self.iterate_collisions(entity.rect):
+            # print(col.rect)
             if entity.velocity.x > 0:
                 entity.position.x -= entity.rect.right - col.rect.left
             elif entity.velocity.x < 0:
                 entity.position.x += col.rect.right - entity.rect.left
+            # update rect
+            entity.rect.center = entity.position.xy
         # y movement
         entity.position.y += entity.velocity.y * SORA.DELTA
         entity.rect.center = entity.position.xy
@@ -213,6 +223,8 @@ class Collision2DAspect(scene.Aspect):
                 entity.position.y -= entity.rect.bottom - col.rect.top
             elif entity.velocity.y < 0:
                 entity.position.y += col.rect.bottom - entity.rect.top
+            # update rect
+            entity.rect.center = entity.position.xy
         # update rect once more
         entity.rect.center = entity.position.xy
 
@@ -230,6 +242,11 @@ class Collision2DAspect(scene.Aspect):
             # check collision
             if rect.colliderect(entity.rect):
                 yield entity
+        # iterate if there are tilemap
+        if not self._tile_map: return
+        for item in self._tile_map.iterate_active_tiles():
+            # print(item)
+            if item.rect.colliderect(entity.rect): yield item
 
     def handle(self):
         """Handle Collisions for Collision2D Components"""
@@ -290,6 +307,22 @@ TODO:
 - occlusion mask
 """
 
+class Tile:
+    def __init__(self, sprite_path, position, sprite_rect):
+        # private
+        self._hrect = sprite_rect
+        self._position = position
+        # public
+        self.static = True
+        self.position = position
+        self.sprite_path = sprite_path
+    
+    @property
+    def rect(self):
+        return pgRect(self._position[0] + self._hrect.x, self._position[1] + self._hrect.y,
+                    self._hrect.w, self._hrect.h)
+
+
 class TileMap(scene.Aspect):
     CHUNK_KEY = "tilemap"
     WORLD_KEY = "tilemap"
@@ -315,8 +348,17 @@ class TileMap(scene.Aspect):
                 rect if rect else pgRect(0, 0, 0, 0)
             )
         return self._resized_sprites[sprite_path]
+    
+    def set_sprite_data(self, sprite_path, rect):
+        """Set sprite data for a sprite"""
+        if sprite_path in self._resized_sprites:
+            rref = self._resized_sprites[sprite_path][1]
+            rref.topleft = rect.topleft
+            rref.w, rref.h = rect.w, rect.h
+        else:
+            self.load_resized_sprite(sprite_path, rect)
 
-    #=== adding tiles
+    #=== tiles
     def add_tile_to_chunk(self, cx: int, cy: int, sprite_path: str, tx: int, ty: int):
         """Add a tile to a chunk"""
         # literally a dict
@@ -326,10 +368,13 @@ class TileMap(scene.Aspect):
         if not self.CHUNK_KEY in chunk._dev: chunk._dev[self.CHUNK_KEY] = {}
         # add tile
         tx, ty = smath.__mod__(tx, self._chunk_tile_area[0]), smath.__mod__(ty, self._chunk_tile_area[1])
-        chunk._dev[self.CHUNK_KEY][self.get_tile_hash(tx, ty)] = (tx * self._tsize[0] + chunk.rect.x, 
-                                ty * self._tsize[1] + chunk.rect.y, sprite_path)
+        sprite_data = self.load_resized_sprite(sprite_path)
+        chunk._dev[self.CHUNK_KEY][self.get_tile_hash(tx, ty)] = Tile(
+            sprite_path,
+            (tx * self._tsize[0] + chunk.rect.x, ty * self._tsize[1] + chunk.rect.y),
+            self._resized_sprites[sprite_path][1]
+        )
         self._registered_chunks.add(hash(chunk))
-        self.load_resized_sprite(sprite_path)
         # print(chunk._dev[self.CHUNK_KEY][self.get_tile_hash(tx, ty)])
     
     def add_tile_global(self, sprite_path: str, tx: int, ty: int):
@@ -342,14 +387,34 @@ class TileMap(scene.Aspect):
         """Get a tile hash"""
         return f"{int(tx)}|{int(ty)}"
     
+    def iterate_active_tiles(self):
+        """iterate t hrough all the active tils"""
+        for cid in self._world._active_chunks:
+            if not cid in self._registered_chunks: continue
+            for item in self._world._chunks[cid]._dev[self.CHUNK_KEY].values():
+                yield item
+
     #=== rendering
     def handle(self):
         """Handle the rendering of the tilemap"""
-        for cid in self._world._active_chunks:
-            if not cid in self._registered_chunks: continue
-            # render the tiles in the map
-            for item in self._world._chunks[cid]._dev[self.CHUNK_KEY].values():
-                SORA.FRAMEBUFFER.blit(self._resized_sprites[item[2]][0], (item[0], item[1]))
+        for item in self.iterate_active_tiles():
+            SORA.FRAMEBUFFER.blit(self._resized_sprites[item.sprite_path][0], item.rect)
+
+
+class TileMapDebug(TileMap):
+    def __init__(self):
+        super().__init__()
+    
+    def handle(self):
+        """Handle the rendering of the tilemap"""
+        for item in self.iterate_active_tiles():
+            SORA.FRAMEBUFFER.blit(self._resized_sprites[item.sprite_path][0], item.rect)
+            # debug render rect
+            r = self._resized_sprites[item.sprite_path]
+            # if r.w == 0 or r.h == 0: continue
+            # print((r.x + item[0], r.y + item[0], r.w, r.h))
+            pgdraw.rect(SORA.DEBUGBUFFER, (0, 0, 255), item.rect, 1)
+
 
 # ------------------------------------------------------------ #
 # particle system
@@ -392,7 +457,6 @@ def update_square_particle(parent, particle):
     # render -- square (that rotates)
     points = [i.rotate(particle[2]) + particle[0] for i in particle[6]]
     pgdraw.polygon(soragl.SoraContext.FRAMEBUFFER, particle[4], points, 1)
-
 
 # register
 physics.ParticleHandler.register_create_function("square", create_square_particle)

@@ -120,20 +120,25 @@ sce2.add_component(base_objects.Collision2DComponent())
 
 
 # aspects
+
+# scw.add_aspect(base_objects.TileMap())
+scw.add_aspect(base_objects.TileMapDebug())
+
 scw.add_aspect(base_objects.SpriteRendererAspect())
 # scw.add_aspect(base_objects.SpriteRendererAspectDebug())
 # scw.add_aspect(base_objects.Collision2DAspect())
 scw.add_aspect(base_objects.Collision2DRendererAspectDebug())
 scw.add_aspect(base_objects.RenderableAspect())
 
-scw.add_aspect(base_objects.TileMap())
 
 scene.SceneHandler.push_scene(sc)
 
 # ------------------------------ #
 # post testing
 
-tm = scw.get_aspect(base_objects.TileMap)
+tm = scw.get_aspect(base_objects.TileMapDebug)
+tm.set_sprite_data("assets/sprites/shovel.png", pygame.Rect(0, 0, 16, 16))
+
 tm.add_tile_global("assets/sprites/shovel.png", 0, 0)
 tm.add_tile_global("assets/sprites/shovel.png", 17, 6)
 tm.add_tile_global("assets/sprites/shovel.png", 2, 3)

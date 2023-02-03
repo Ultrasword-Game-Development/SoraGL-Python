@@ -284,6 +284,12 @@ Contains some aspects -- that act as components
 # ------------------------------ #
 # tilemap
 
+"""
+TODO:
+- collision mask
+- occlusion mask
+"""
+
 class TileMap(scene.Aspect):
     CHUNK_KEY = "tilemap"
     WORLD_KEY = "tilemap"

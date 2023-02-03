@@ -1,5 +1,6 @@
 import soragl
-from soragl import scene, physics, mgl, animation, SoraContext as SORA
+from soragl import SoraContext as SORA
+from soragl import scene, physics, mgl, animation, smath
 
 import random
 import math
@@ -7,6 +8,7 @@ import math
 from pygame import Rect as pgRect
 from pygame import math as pgmath
 from pygame import draw as pgdraw
+from pygame import transform as pgtrans
 
 """
 1. sprite / rendering components + rendering aspect
@@ -283,13 +285,65 @@ Contains some aspects -- that act as components
 # tilemap
 
 class TileMap(scene.Aspect):
+    CHUNK_KEY = "tilemap"
+    WORLD_KEY = "tilemap"
+    
     def __init__(self):
-        super().__init__()
-        self.grid = []
-        # etc -- smth else figure out tmr
+        super().__init__(None)
+        # private
+        self._tsize = [0, 0]
+        self._chunk_tile_area = [0, 0]
+        self._resized_sprites = {}
+        self._registered_chunks = set()
 
+    def on_add(self):
+        self._tsize = [self._world._options["tilepixw"], self._world._options["tilepixh"]]
+        self._chunk_tile_area = [self._world._options["chunktilew"], self._world._options["chunktileh"]]
 
+    #=== utils
+    def load_resized_sprite(self, sprite_path, rect=None):
+        """Get a resized sprite"""
+        if sprite_path not in self._resized_sprites:
+            self._resized_sprites[sprite_path] = (
+                pgtrans.scale(SORA.load_image(sprite_path), self._tsize),
+                rect if rect else pgRect(0, 0, 0, 0)
+            )
+        return self._resized_sprites[sprite_path]
 
+    #=== adding tiles
+    def add_tile_to_chunk(self, cx: int, cy: int, sprite_path: str, tx: int, ty: int):
+        """Add a tile to a chunk"""
+        # literally a dict
+        chunk = self._world.get_chunk(cx + tx // self._chunk_tile_area[0], 
+                    (cy + ty // self._chunk_tile_area[1]))
+        # if not registered already -- do so now
+        if not self.CHUNK_KEY in chunk._dev: chunk._dev[self.CHUNK_KEY] = {}
+        # add tile
+        tx, ty = smath.__mod__(tx, self._chunk_tile_area[0]), smath.__mod__(ty, self._chunk_tile_area[1])
+        chunk._dev[self.CHUNK_KEY][self.get_tile_hash(tx, ty)] = (tx * self._tsize[0] + chunk.rect.x, 
+                                ty * self._tsize[1] + chunk.rect.y, sprite_path)
+        self._registered_chunks.add(hash(chunk))
+        self.load_resized_sprite(sprite_path)
+        # print(chunk._dev[self.CHUNK_KEY][self.get_tile_hash(tx, ty)])
+    
+    def add_tile_global(self, sprite_path: str, tx: int, ty: int):
+        """Add a tile to the world"""
+        cx, cy = tx // self._chunk_tile_area[0], ty // self._chunk_tile_area[1]
+        tx, ty = smath.__mod__(tx, self._chunk_tile_area[0]), smath.__mod__(ty, self._chunk_tile_area[1])
+        self.add_tile_to_chunk(cx, cy, sprite_path, tx, ty)
+
+    def get_tile_hash(self, tx: int, ty: int):
+        """Get a tile hash"""
+        return f"{int(tx)}|{int(ty)}"
+    
+    #=== rendering
+    def handle(self):
+        """Handle the rendering of the tilemap"""
+        for cid in self._world._active_chunks:
+            if not cid in self._registered_chunks: continue
+            # render the tiles in the map
+            for item in self._world._chunks[cid]._dev[self.CHUNK_KEY].values():
+                SORA.FRAMEBUFFER.blit(self._resized_sprites[item[2]][0], (item[0], item[1]))
 
 # ------------------------------------------------------------ #
 # particle system

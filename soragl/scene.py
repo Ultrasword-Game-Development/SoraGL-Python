@@ -86,7 +86,6 @@ class EntityHandler:
         """Clear the entity handler"""
         self._entities.clear()
 
-
 # ------------------------------ #
 # scene - chunks
 
@@ -96,6 +95,7 @@ class Chunk:
         self._intrinstic_entities = set()
         self._hash = f"{int(x)}-{int(y)}"
         self._world = world
+        self._dev = {}
         
         # public
         cpw, cph = options["chunkpixw"], options["chunkpixh"]
@@ -111,9 +111,8 @@ class Chunk:
         for entity in self._intrinstic_entities:
             self._world._scene._global_entities[entity].update()
         # # debug update
-        # if soragl.SoraContext.DEBUG:
-        #     pygame.draw.rect(soragl.SoraContext.FRAMEBUFFER, (255, 0, 0), self.area, 1)
-
+        if soragl.SoraContext.DEBUG:
+            pygame.draw.rect(soragl.SoraContext.FRAMEBUFFER, (255, 0, 0), self.rect, 1)
 
 # ------------------------------ #
 # scene - aspects
@@ -192,7 +191,7 @@ class World:
         self._options = options
         # rendering
         self._center_chunk = [0, 0]
-        self._developer_data = {}
+        self._dev = {}
 
         # variables
         self.render_distance = render_distance
@@ -259,14 +258,15 @@ class World:
             entity.components.remove(comp_class.get_hash())
 
     #== chunks
-    def add_chunk(self, chunk_hash: int, chunk):
+    def add_chunk(self, chunk):
         """Add chunks to the world"""
-        self._chunks[chunk_hash] = chunk
+        self._chunks[hash(chunk)] = chunk
 
-    def remove_chunk(self, chunk_hash: int):
+    def remove_chunk(self, chunk: Chunk):
         """Remove a chunk"""
-        if chunk_hash in self._chunks:
-            return self._chunks.pop(chunk_hash)
+        h = hash(chunk)
+        if h in self._chunks:
+            return self._chunks.pop(h)
 
     def set_center_chunk(self, x: int, y: int):
         """Set the center chunk for rendering"""

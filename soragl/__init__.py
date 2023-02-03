@@ -278,6 +278,8 @@ class SoraContext:
     @classmethod
     def is_key_pressed(cls, key):
         """Returns if key is pressed."""
+        if not key in cls.KEYBOARD_KEYS:
+            cls.KEYBOARD_KEYS[key] = False
         return cls.KEYBOARD_KEYS[key]
 
     @classmethod

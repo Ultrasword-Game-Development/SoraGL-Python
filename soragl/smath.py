@@ -1,4 +1,19 @@
+import math
+import numpy as np
 from pygame.math import Vector2
+
+# ------------------------------------------------------------ #
+# math functions 
+# ------------------------------------------------------------ #
+
+def __mod__(val, mod):
+    """Return the modulo of a and b"""
+    return (val%mod) * np.sign(val)
+
+
+
+
+
 
 # ------------------------------------------------------------ #
 # curve functions 

@@ -8,10 +8,16 @@ from soragl import animation, scene, physics, base_objects
 
 # ------------------------------ #
 # setup
-SORA = soragl.SoraContext.initialize({"fps": 30, "window_size": [1280, 720], 
-            "window_flags": pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF, 
-            "window_bits": 32, "framebuffer_flags": pygame.SRCALPHA, 
-            "framebuffer_size": [1280//3, 720//3], "framebuffer_bits": 32})
+SORA = soragl.SoraContext.initialize({
+        "fps": 30, 
+        "window_size": [1280, 720], 
+        "window_flags": pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF, 
+        "window_bits": 32, 
+        "framebuffer_flags": pygame.SRCALPHA, 
+        "framebuffer_size": [1280//3, 720//3], 
+        "framebuffer_bits": 32,
+        "debug": True,
+})
 
 SORA.create_context()
 
@@ -26,7 +32,11 @@ if SORA.is_flag_active(pygame.OPENGL):
 # ------------------------------ #
 # post setup
 
-ModernGL.create_context(options={"standalone": False, "gc_mode": "context_gc", "clear_color": [0.0, 0.0, 0.0, 1.0]})
+ModernGL.create_context(options={
+            "standalone": False, 
+            "gc_mode": "context_gc", 
+            "clear_color": [0.0, 0.0, 0.0, 1.0], 
+    })
 
 shader = mgl.ShaderProgram("assets/shaders/default.glsl")
 
@@ -116,9 +126,19 @@ scw.add_aspect(base_objects.SpriteRendererAspect())
 scw.add_aspect(base_objects.Collision2DRendererAspectDebug())
 scw.add_aspect(base_objects.RenderableAspect())
 
+scw.add_aspect(base_objects.TileMap())
+
 scene.SceneHandler.push_scene(sc)
 
-# print(scw._components)
+# ------------------------------ #
+# post testing
+
+tm = scw.get_aspect(base_objects.TileMap)
+tm.add_tile_global("assets/sprites/shovel.png", 0, 0)
+tm.add_tile_global("assets/sprites/shovel.png", 17, 6)
+tm.add_tile_global("assets/sprites/shovel.png", 2, 3)
+tm.add_tile_global("assets/sprites/shovel.png", -2, 2)
+tm.add_tile_global("assets/sprites/shovel.png", 2, 2)
 
 
 # ------------------------------ #
@@ -131,6 +151,9 @@ while SORA.RUNNING:
     # pygame update + render
     registry.update()
     scene.SceneHandler.update()
+
+    if SORA.is_key_clicked(pygame.K_d) and SORA.is_key_pressed(pygame.K_LSHIFT):
+        SORA.DEBUG = not SORA.DEBUG
 
     # SORA.FRAMEBUFFER.blit(SORA.DEBUGBUFFER, (0, 0))
 

@@ -2,6 +2,7 @@ import soragl
 if soragl.SoraContext.DEBUG:
     print("Activated mgl.py")
 
+import glm
 
 from . import misc
 import moderngl
@@ -30,12 +31,15 @@ class ModernGL:
         cls.CTX.gc_mode = options['gc_mode'] if 'gc_mode' in options else None
         cls.CLEARCOLOR = options['clear_color'] if 'clear_color' in options else ModernGL.CLEARCOLOR
         # create the quad buffer for FB
+        print("quad buffer needs to be replaced with custom vao object")
         cls.FB_BUFFER = cls.CTX.buffer(data = array('f', [
-            -1.0, -1.0, 0.0, 0.0,
-            1.0, -1.0, 1.0, 0.0,
-            1.0, 1.0, 1.0, 1.0,
-            -1.0, 1.0, 0.0, 1.0,
+            -1.0, -1.0,     0.0, 0.0,
+            1.0, -1.0,      1.0, 0.0,
+            1.0, 1.0,       1.0, 1.0,
+            -1.0, 1.0,      0.0, 1.0,
         ]))
+        # stuff
+        if options["depth_test"]: cls.CTX.enable(moderngl.DEPTH_TEST)
 
     @classmethod
     def update_context(cls):
@@ -54,6 +58,11 @@ class ModernGL:
         
         
         cls.CTX.disable(moderngl.BLEND)
+    
+    @classmethod
+    def set_clear_color(cls, color):
+        """Sets the clear color."""
+        cls.CLEARCOLOR = color
 
 
 # ------------------------------ #
@@ -157,11 +166,11 @@ class ShaderProgram:
         # extract vert + frag shaders
         data = misc.fread(path)
         # separate into Vertex and Fragment shaders
-        sections = [ShaderStep(shadersnippet) for shadersnippet in data.split(ShaderProgram.PIPELINE_SPLIT)[1:]]
-        sections.sort(key=lambda x: x.shadertype)
+        self.sections = [ShaderStep(shadersnippet) for shadersnippet in data.split(ShaderProgram.PIPELINE_SPLIT)[1:]]
+        self.sections.sort(key=lambda x: x.shadertype)
         # create program
         print(self.path)
-        self.program = ModernGL.CTX.program(vertex_shader=sections[0].shader, fragment_shader=sections[1].shader)
+        self.program = ModernGL.CTX.program(vertex_shader=self.sections[0].shader, fragment_shader=self.sections[1].shader)
     
     def update_uniforms(self, s: str, uniforms: dict):
         """Update uniforms"""
@@ -284,47 +293,42 @@ class VAO:
 # camera
 
 class Camera:
-    def __init__(self, position: pgmath.Vector3, target: pgmath.Vector3, up: pgmath.Vector3):
+    def __init__(self, pos, front, up):
         # private
-        self._position = position if type(position) == pgmath.Vector3 else pgmath.Vector3(position)
-        self._target = target if type(target) == pgmath.Vector3 else pgmath.Vector3(target)
-        self._up = up if type(up) == pgmath.Vector3 else pgmath.Vector3(up)
+        self._position = glm.vec3(pos[0], pos[1], pos[2])
+        self._front = glm.vec3(front[0], front[1], front[2])
+        self._up = glm.vec3(up[0], up[1], up[2])
+
         self._view = None
-        self._projection = None
+        self._proj = None
     
+    def calculate_view_matrix(self, pos, front, up):
+        """Calculate the view matrix"""
+        # add rotation
+        return glm.lookAt(pos, pos + front, up)
+        
     def get_view_matrix(self):
         """Get the view matrix"""
         return self._view
     
     def get_projection_matrix(self):
         """Get the projection matrix"""
-        return self._projection
+        return self._proj
     
     @property
     def position(self):
         return self._position
     
-    @position.setter
-    def position(self, value):
-        self._position = value
-        self._view = sglm.look_at(self.position, self.target, self.up)
-    
     @property
     def target(self):
         return self._target
-
-    @target.setter
-    def target(self, value):
-        self._target = value
-        self._vew = sglm.look_at(self.position, self.target, self.up)
 
     @property
     def up(self):
         return self._up
 
-    @up.setter
-    def up(self, value):
-        self._up = value
-        self._view = sglm.look_at(self.position, self.target, self.up)
+    def translate(self, x, y, z):
+        self._position += glm.vec3(x, y, z)
+        self._view = self.calculate_view_matrix(self._position, self._front, self._up)
 
 

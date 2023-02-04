@@ -1,9 +1,10 @@
 import soragl
 from soragl import SoraContext as SORA
-from soragl import scene, physics, mgl, animation, smath, sglm
+from soragl import scene, physics, mgl, animation, smath
 
 import random
 import math
+import glm
 
 from pygame import Rect as pgRect
 from pygame import math as pgmath
@@ -575,9 +576,10 @@ class Camera3D(mgl.Camera):
 
         # public
         # view changes -- translation + rotation + scaling
-        self._view = sglm.look_at(physics.World3D.X_AXIS, self.position, self.up)
+        self._view = self.calculate_view_matrix(self._position, self._front, self._up)
         # proj doesnt change too often -- fov + aspect + near + far
-        self._projection = sglm.perspective_matrix(self._fov, self._aspect, self._near, self._far)
+        self._proj = glm.perspective(glm.radians(self._fov), self._aspect, self._near, self._far)
+
 
 
 print("More objects to be added! base_objects.py")

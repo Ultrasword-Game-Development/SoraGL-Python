@@ -168,14 +168,18 @@ class ShaderProgram:
             # check if texture type
             try:
                 # print(uniforms[uni], type(uniforms[uni]))
-                if type(uniforms[uni]) == moderngl.texture.Texture:
-                    uniforms[uni].use(location=tcount)
+                if type(uniforms[uni][0]) == moderngl.texture.Texture:
+                    uniforms[uni][0].use(location=tcount)
                     shader.program[uni].value = tcount
                     tcount += 1
+                elif uniforms[uni][1] == VAO.SCALAR:
+                    shader.program[uni].value = uniforms[uni][0]
+                elif uniforms[uni][1] == VAO.VECTOR:
+                    shader.program[uni].write(uniforms[uni][0])
                 else:
-                    shader.program[uni].value = uniforms[uni]
+                    print('bad uniform type')
             except Exception as e:
-                print(f"Error occured when uploading uniform: {uni} of value: {uniforms[uni]}")
+                print(f"Error occured when uploading uniform: `{uni}` | of value: {uniforms[uni]}")
                 print(e)
                 soragl.SoraContext.pause_time(0.4)
 
@@ -217,6 +221,8 @@ class VAO:
     Vertex Attribute Objects
     - very useful -- layout for vertices in the opengl context
     """
+    SCALAR = 0
+    VECTOR = 1
 
     def __init__(self, shader_path: str = ShaderProgram.DEFAULT):
         """Creates an empty VAO"""
@@ -234,10 +240,14 @@ class VAO:
         """Add an attribute to the vao"""
         self.attributes.append([parse, var_name])
     
-    def change_uniform(self, name: str, value):
+    def change_uniform_scalar(self, name: str, value):
         """Change a uniform value"""
-        self.uniforms[name] = value
+        self.uniforms[name] = (value, self.SCALAR)
     
+    def change_uniform_vector(self, name: str, value):
+        """Change a uniform value"""
+        self.uniforms[name] = (value, self.VECTOR)
+
     def get_uniform(self, name: str):
         """Get a uniform value"""
         return self.uniforms[name]
@@ -267,3 +277,59 @@ class VAO:
         self.vao.render(mode=mode)
 
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+# ------------------------------ #
+# camera
+
+class Camera:
+    def __init__(self, position: pgmath.Vector3, target: pgmath.Vector3, up: pgmath.Vector3):
+        # private
+        self._position = position if type(position) == pgmath.Vector3 else pgmath.Vector3(position)
+        self._target = target if type(target) == pgmath.Vector3 else pgmath.Vector3(target)
+        self._up = up if type(up) == pgmath.Vector3 else pgmath.Vector3(up)
+        self._view = None
+        self._projection = None
+    
+    def get_view_matrix(self):
+        """Get the view matrix"""
+        return self._view
+    
+    def get_projection_matrix(self):
+        """Get the projection matrix"""
+        return self._projection
+    
+    @property
+    def position(self):
+        return self._position
+    
+    @position.setter
+    def position(self, value):
+        self._position = value
+        self._view = sglm.look_at(self.position, self.target, self.up)
+    
+    @property
+    def target(self):
+        return self._target
+
+    @target.setter
+    def target(self, value):
+        self._target = value
+        self._vew = sglm.look_at(self.position, self.target, self.up)
+
+    @property
+    def up(self):
+        return self._up
+
+    @up.setter
+    def up(self, value):
+        self._up = value
+        self._view = sglm.look_at(self.position, self.target, self.up)
+
+
+
+
+=======
+>>>>>>> parent of fde8e39 (started 3d rendering stuff + world2d in physics.py for 2d p hysics)
+=======
+>>>>>>> parent of fde8e39 (started 3d rendering stuff + world2d in physics.py for 2d p hysics)

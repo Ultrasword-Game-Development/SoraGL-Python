@@ -38,18 +38,27 @@ ModernGL.create_context(options={
             "clear_color": [0.0, 0.0, 0.0, 1.0], 
     })
 
-shader = mgl.ShaderProgram("assets/shaders/default.glsl")
+# shader = mgl.ShaderProgram("assets/shaders/default.glsl")
+shader = mgl.ShaderProgram("assets/shaders/default3d.glsl")
 
-vertices = mgl.Buffer('16f', [-1.0, -1.0, 0.0, 1.0,
-                            1.0, -1.0, 1.0, 1.0,
-                            1.0, 1.0, 1.0, 0.0,
-                            -1.0, 1.0, 0.0, 0.0])
+vertices = mgl.Buffer('36f',  [
+        -1.0, -1.0, 0.0,    0.0, 1.0,    1.0, 0.0, 0.0, 1.0,
+        1.0, -1.0, 1.0,     1.0, 1.0,    0.0, 1.0, 0.0, 1.0,
+        1.0, 1.0, 1.0,      1.0, 0.0,    0.0, 0.0, 1.0, 1.0,
+        -1.0, 1.0, 0.0,     0.0, 0.0,    1.0, 1.0, 1.0, 1.0
+])
 indices = mgl.Buffer('6i', [0, 1, 2, 3, 0, 2])
 vattrib = mgl.VAO()
-vattrib.add_attribute('2f', 'vvert')
+vattrib.add_attribute('3f', 'vvert')
 vattrib.add_attribute('2f', 'vuv')
+vattrib.add_attribute('4f', 'vcolor')
 # add attribs?
 vattrib.create_structure(vertices, indices)
+
+
+camera = base_objects.Camera3D((0, 0, 10), (0, 0, 0), 45, 16/9)
+shader.program['view'].write(camera.get_view_matrix().tobytes())
+shader.program['proj'].write(camera.get_projection_matrix().tobytes())
 
 
 # ------------------------------ #
@@ -166,9 +175,9 @@ while SORA.RUNNING:
     ModernGL.update_context()
     ModernGL.CTX.clear(ModernGL.CLEARCOLOR[0], ModernGL.CLEARCOLOR[1], ModernGL.CLEARCOLOR[2], ModernGL.CLEARCOLOR[3])
     ModernGL.CTX.enable(mgl.moderngl.BLEND)
-    vattrib.change_uniform("utime", SORA.ENGINE_UPTIME % 10000)
-    vattrib.change_uniform("framebuffer", mgl.Texture.pg2gltex(SORA.FRAMEBUFFER, "fb"))
-    vattrib.change_uniform("debugbuffer", mgl.Texture.pg2gltex(SORA.DEBUGBUFFER, "db"))
+    vattrib.change_uniform_scalar("utime", SORA.ENGINE_UPTIME % 10000)
+    vattrib.change_uniform_scalar("framebuffer", mgl.Texture.pg2gltex(SORA.FRAMEBUFFER, "fb"))
+    vattrib.change_uniform_scalar("debugbuffer", mgl.Texture.pg2gltex(SORA.DEBUGBUFFER, "db"))
 
     # vao.render(mode=mgl.moderngl.TRIANGLES)
     vattrib.render()

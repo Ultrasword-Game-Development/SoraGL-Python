@@ -564,10 +564,32 @@ physics.ParticleHandler.register_update_function("custom", update_custom_particl
 
 
 
+<<<<<<< HEAD
+
+<<<<<<< HEAD
+class Camera3D(mgl.Camera):
+    def __init__(self, position: pgmath.Vector3, target: pgmath.Vector3, fov: float, aspect: float, near: float = 0.1, far: float = 1000.0):
+        super().__init__(position, target, physics.World3D.UP)
+        # private
+        self._near = near
+        self._far = far
+        self._fov = fov
+        self._aspect = aspect
+=======
+=======
 
 
 
+>>>>>>> parent of fde8e39 (started 3d rendering stuff + world2d in physics.py for 2d p hysics)
 
+
+>>>>>>> parent of fde8e39 (started 3d rendering stuff + world2d in physics.py for 2d p hysics)
+
+        # public
+        # view changes -- translation + rotation + scaling
+        self._view = sglm.look_at(physics.World3D.X_AXIS, self.position, self.up)
+        # proj doesnt change too often -- fov + aspect + near + far
+        self._projection = sglm.perspective_matrix(self._fov, self._aspect, self._near, self._far)
 
 
 print("More objects to be added! base_objects.py")

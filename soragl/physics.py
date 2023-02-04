@@ -17,9 +17,26 @@ RIGHT = pgmath.Vector2(1, 0)
 LEFT = pgmath.Vector2(-1, 0)
 UP = pgmath.Vector2(0, -1)
 DOWN = pgmath.Vector2(0, 1)
+<<<<<<< HEAD
+
+<<<<<<< HEAD
+class World3D:
+    X_AXIS = pgmath.Vector3(1, 0, 0)
+    Y_AXIS = pgmath.Vector3(0, 1, 0)
+    Z_AXIS = pgmath.Vector3(0, 0, 1)
+
+    GRAVITY = Y_AXIS * -9.8
+    UP = Y_AXIS
+
+=======
+X_AXIS = RIGHT
+Y_AXIS = UP
+>>>>>>> parent of fde8e39 (started 3d rendering stuff + world2d in physics.py for 2d p hysics)
+=======
 
 X_AXIS = RIGHT
 Y_AXIS = UP
+>>>>>>> parent of fde8e39 (started 3d rendering stuff + world2d in physics.py for 2d p hysics)
 
 GRAVITY = DOWN * 9.8
 

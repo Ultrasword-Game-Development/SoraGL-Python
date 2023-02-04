@@ -1,6 +1,6 @@
 import soragl
 from soragl import SoraContext as SORA
-from soragl import scene, physics, mgl, animation, smath
+from soragl import scene, physics, mgl, animation, smath, sglm
 
 import random
 import math
@@ -436,7 +436,7 @@ def create_square_particle(parent, **kwargs):
             kwargs["angv"] if "angv" in kwargs else (random.random()-0.5) * 100,
             list(kwargs["color"]) if "color" in kwargs else [0, 0, 255],
             kwargs["life"] if "life" in kwargs else 1.0,
-            (physics.RIGHT * r, physics.UP * r, physics.LEFT * r, physics.DOWN * r), # points
+            (physics.World2D.RIGHT * r, physics.World2D.UP * r, physics.World2D.LEFT * r, physics.World2D.DOWN * r), # points
             parent.get_new_particle_id()]
 
 def update_square_particle(parent, particle):
@@ -564,9 +564,6 @@ physics.ParticleHandler.register_update_function("custom", update_custom_particl
 
 
 
-<<<<<<< HEAD
-
-<<<<<<< HEAD
 class Camera3D(mgl.Camera):
     def __init__(self, position: pgmath.Vector3, target: pgmath.Vector3, fov: float, aspect: float, near: float = 0.1, far: float = 1000.0):
         super().__init__(position, target, physics.World3D.UP)
@@ -575,15 +572,6 @@ class Camera3D(mgl.Camera):
         self._far = far
         self._fov = fov
         self._aspect = aspect
-=======
-=======
-
-
-
->>>>>>> parent of fde8e39 (started 3d rendering stuff + world2d in physics.py for 2d p hysics)
-
-
->>>>>>> parent of fde8e39 (started 3d rendering stuff + world2d in physics.py for 2d p hysics)
 
         # public
         # view changes -- translation + rotation + scaling

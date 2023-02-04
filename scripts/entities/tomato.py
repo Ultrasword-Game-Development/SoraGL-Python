@@ -41,13 +41,13 @@ class Tomato(physics.Entity):
 
         # input handling
         if soragl.SoraContext.is_key_pressed(pygame.K_a):
-            self.velocity += physics.LEFT * self.SPEED 
+            self.velocity += physics.World2D.LEFT * self.SPEED 
         if soragl.SoraContext.is_key_pressed(pygame.K_d):
-            self.velocity += physics.RIGHT * self.SPEED
+            self.velocity += physics.World2D.RIGHT * self.SPEED
         if soragl.SoraContext.is_key_pressed(pygame.K_w):
-            self.velocity += physics.UP * self.SPEED
+            self.velocity += physics.World2D.UP * self.SPEED
         if soragl.SoraContext.is_key_pressed(pygame.K_s):
-            self.velocity += physics.DOWN * self.SPEED
+            self.velocity += physics.World2D.DOWN * self.SPEED
         
 
 

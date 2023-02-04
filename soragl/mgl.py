@@ -2,11 +2,14 @@ import soragl
 if soragl.SoraContext.DEBUG:
     print("Activated mgl.py")
 
+
 from . import misc
 import moderngl
 
 import struct
 from array import array
+
+import pygame.math as pgmath
 
 
 class ModernGL:
@@ -277,8 +280,6 @@ class VAO:
         self.vao.render(mode=mode)
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 # ------------------------------ #
 # camera
 
@@ -327,9 +328,3 @@ class Camera:
         self._view = sglm.look_at(self.position, self.target, self.up)
 
 
-
-
-=======
->>>>>>> parent of fde8e39 (started 3d rendering stuff + world2d in physics.py for 2d p hysics)
-=======
->>>>>>> parent of fde8e39 (started 3d rendering stuff + world2d in physics.py for 2d p hysics)

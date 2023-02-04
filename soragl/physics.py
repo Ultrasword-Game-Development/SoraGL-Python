@@ -13,13 +13,15 @@ from pygame import draw as pgdraw
 # global constnats
 # ------------------------------------------------------------ #
 
-RIGHT = pgmath.Vector2(1, 0)
-LEFT = pgmath.Vector2(-1, 0)
-UP = pgmath.Vector2(0, -1)
-DOWN = pgmath.Vector2(0, 1)
-<<<<<<< HEAD
+class World2D:
+    RIGHT = pgmath.Vector2(1, 0)
+    LEFT = pgmath.Vector2(-1, 0)
+    UP = pgmath.Vector2(0, -1)
+    DOWN = pgmath.Vector2(0, 1)
+    X_AXIS = RIGHT
+    Y_AXIS = UP
 
-<<<<<<< HEAD
+    GRAVITY = DOWN * 9.8
 class World3D:
     X_AXIS = pgmath.Vector3(1, 0, 0)
     Y_AXIS = pgmath.Vector3(0, 1, 0)
@@ -28,17 +30,7 @@ class World3D:
     GRAVITY = Y_AXIS * -9.8
     UP = Y_AXIS
 
-=======
-X_AXIS = RIGHT
-Y_AXIS = UP
->>>>>>> parent of fde8e39 (started 3d rendering stuff + world2d in physics.py for 2d p hysics)
-=======
 
-X_AXIS = RIGHT
-Y_AXIS = UP
->>>>>>> parent of fde8e39 (started 3d rendering stuff + world2d in physics.py for 2d p hysics)
-
-GRAVITY = DOWN * 9.8
 
 # ------------------------------------------------------------ #
 # create a base entity class using the entity system
@@ -297,7 +289,7 @@ def _default_create(parent, **kwargs):
 def _default_update(parent, particle):
     """Default update function for particles"""
     # gravity
-    particle[1] += GRAVITY * soragl.SoraContext.DELTA
+    particle[1] += World2D.GRAVITY * soragl.SoraContext.DELTA
     particle[4] -= soragl.SoraContext.DELTA
     if particle[4] <= 0:
         parent.remove_particle(particle)

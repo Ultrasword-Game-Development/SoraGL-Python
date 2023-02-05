@@ -293,20 +293,45 @@ class VAO:
 # camera
 
 class Camera:
-    def __init__(self, pos, front, up):
+    def __init__(self, pos, front, up, rot):
         # private
+
+        # transformation
         self._position = glm.vec3(pos[0], pos[1], pos[2])
         self._front = glm.vec3(front[0], front[1], front[2])
+        self._target = glm.vec3(front[0], front[1], front[2])
+        self._rotation = glm.vec3(rot[0], rot[1], rot[2])
+
+        # work on quaternions
+        self._rot = glm.quad(0, 0, 0, 0)
+
+        # direction vectors
         self._up = glm.vec3(up[0], up[1], up[2])
+        self._right = glm.vec3(0, 0, 0)
 
         self._view = None
         self._proj = None
     
-    def calculate_view_matrix(self, pos, front, up):
+    def calculate_properties(self):
+        """Calculate the direction vectors"""
+        # rotation
+        self._rot_mat = glm.rotate(self._identity, glm.radians(self._rotation.x), glm.vec3(0, 1, 0))
+        self._rot_mat = glm.rotate(self._rot_mat, glm.radians(self._rotation.y), glm.vec3(0, 0, 1))
+        self._rot_mat = glm.rotate(self._rot_mat, glm.radians(self._rotation.z), glm.vec3(1, 0, 0))
+        self._target = glm.normalize(self._rot_mat * self._front)
+        # right vec
+        self._right = glm.normalize(glm.cross(self._target, self._up))
+
+    def calculate_view_matrix(self):
         """Calculate the view matrix"""
-        # add rotation
-        return glm.lookAt(pos, pos + front, up)
-        
+        # self.calculate_properties()
+        # rotation?
+        return glm.lookAt(
+            self._position,
+            self._position + self._target,
+            self._up
+        )
+    
     def get_view_matrix(self):
         """Get the view matrix"""
         return self._view
@@ -315,6 +340,16 @@ class Camera:
         """Get the projection matrix"""
         return self._proj
     
+    @property
+    def front(self):
+        """Get the front vector"""
+        return self._front
+    
+    @property
+    def right(self):
+        """Get the right vector"""
+        return self._right
+
     @property
     def position(self):
         return self._position
@@ -327,8 +362,28 @@ class Camera:
     def up(self):
         return self._up
 
+    @property
+    def rotation(self):
+        """Get the rotation of the camera"""
+        return self._rotation
+
+    def rotate(self, x, y, z):
+        """Rotate the camera in radians"""
+        self.calculate_properties()
+        self._rotation += glm.vec3(x, y, z)
+        self._view = self.calculate_view_matrix()
+
     def translate(self, x, y, z):
+        self.calculate_properties()
         self._position += glm.vec3(x, y, z)
-        self._view = self.calculate_view_matrix(self._position, self._front, self._up)
+        self._view = self.calculate_view_matrix()
+    
+    def r_translate(self, x, y, z):
+        """Translate relative to the camera"""
+        self.calculate_properties()
+        self._position += self._right * x
+        self._position += self._up * y
+        self._position += self._target * z
+        self._view = self.calculate_view_matrix()
 
 

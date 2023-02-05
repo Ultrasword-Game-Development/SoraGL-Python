@@ -210,6 +210,7 @@ class SoraContext:
     @classmethod
     def update_mouse_press(cls, event):
         """Update mouse button press."""
+        if event.button - 1 > 3: return
         cls.MOUSE_BUTTONS[event.button - 1] = True
         cls.MOUSE_PRESSED.add(event.button - 1)
 

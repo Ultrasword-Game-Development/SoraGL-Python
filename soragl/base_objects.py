@@ -564,10 +564,26 @@ physics.ParticleHandler.register_create_function("custom", create_custom_particl
 physics.ParticleHandler.register_update_function("custom", update_custom_particle)
 
 
+# ------------------------------------------------------------ #
+# 3D / 2D cameras!
+"""
+For use in opengl based applications / games! -- not pygame 2D
+- whenever you want to render something, you need to use the camera's view matrix
+"""
+# ------------------------------------------------------------ #
 
-class Camera3D(mgl.Camera):
+class OrthoCamera(mgl.Camera):
+    def __init__(self, pos, front, up):
+        super().__init__(pos, front, up, (0, 0, 0))
+        # private
+        self._view = self.calculate_view_matrix(self._position, self._front, self._up)
+        self._proj = self.calculate_ortho_matrix(0, soragl.SoraContext.SCREEN_WIDTH, soragl.SoraContext.SCREEN_HEIGHT, 0, -1, 1)
+
+
+
+class FrustCamera(mgl.Camera):
     def __init__(self, position: pgmath.Vector3, target: pgmath.Vector3, fov: float, aspect: float, near: float = 0.1, far: float = 1000.0):
-        super().__init__(position, target, physics.World3D.UP)
+        super().__init__(position, target, physics.World3D.UP, (0, 0, 0))
         # private
         self._near = near
         self._far = far
@@ -576,7 +592,7 @@ class Camera3D(mgl.Camera):
 
         # public
         # view changes -- translation + rotation + scaling
-        self._view = self.calculate_view_matrix(self._position, self._front, self._up)
+        self._view = self.calculate_view_matrix()
         # proj doesnt change too often -- fov + aspect + near + far
         self._proj = glm.perspective(glm.radians(self._fov), self._aspect, self._near, self._far)
 

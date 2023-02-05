@@ -7,7 +7,7 @@ import numpy as np
 
 from pygame import draw as pgdraw
 from pygame import math as pgmath
-from soragl import animation, scene, physics, base_objects, sglm
+from soragl import animation, scene, physics, base_objects, misc
 
 # ------------------------------ #
 # setup
@@ -123,7 +123,7 @@ vattrib.add_attribute('4f', 'vcolor')
 vattrib.create_structure(vertices, indices)
 
 # camera
-camera = base_objects.Camera3D((0, 0, -10), (0, 0, 1), 60, 16/9)
+camera = base_objects.FrustCamera((0, 0, -10), (0, 0, -1), 60, 16/9)
 SPEED = 10
 
 vattrib.change_uniform_vector("view", camera.get_view_matrix())
@@ -132,6 +132,8 @@ battrib.change_uniform_vector("view", camera.get_view_matrix())
 battrib.change_uniform_vector("proj", camera.get_projection_matrix())
 
 # exit()
+
+MLOCK = misc.MouseLocking(0.5, 0.5)
 
 # ------------------------------ #
 # game loop
@@ -144,14 +146,24 @@ while SORA.RUNNING:
 
     # testing
     if SORA.is_key_pressed(pygame.K_d):
-        camera.translate(-SPEED * SORA.DELTA, 0, 0)
+        camera.r_translate(SPEED * SORA.DELTA, 0, 0)
     if SORA.is_key_pressed(pygame.K_a):
-        camera.translate(SPEED * SORA.DELTA, 0, 0)
+        camera.r_translate(-SPEED * SORA.DELTA, 0, 0)
     if SORA.is_key_pressed(pygame.K_w):
-        camera.translate(0, 0, SPEED * SORA.DELTA)
+        camera.r_translate(0, 0, SPEED * SORA.DELTA)
     if SORA.is_key_pressed(pygame.K_s):
-        camera.translate(0, 0, -SPEED * SORA.DELTA)
-    # print(camera.position)
+        camera.r_translate(0, 0, -SPEED * SORA.DELTA)
+    
+    if SORA.is_key_clicked(pygame.K_ESCAPE): 
+        MLOCK.locked = not MLOCK.locked
+        MLOCK.hidden = not MLOCK.hidden
+
+    MLOCK.update()
+    # calculate rotation
+    camera.rotate(-MLOCK.delta[0] * 360, MLOCK.delta[1] * 360, 0)
+    # mouse movement for rotation
+    # print(camera.position, camera.rotation)
+    
 
     vattrib.change_uniform_vector("view", camera.get_view_matrix())
     battrib.change_uniform_vector("view", camera.get_view_matrix())

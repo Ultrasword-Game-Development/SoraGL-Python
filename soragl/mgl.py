@@ -39,7 +39,7 @@ class ModernGL:
             -1.0, 1.0,      0.0, 1.0,
         ]))
         # stuff
-        if options["depth_test"]: cls.CTX.enable(moderngl.DEPTH_TEST)
+        if "depth_test" in options and options["depth_test"]: cls.CTX.enable(moderngl.DEPTH_TEST)
 
     @classmethod
     def update_context(cls):

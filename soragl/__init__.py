@@ -5,7 +5,7 @@ import time
 
 
 class SoraContext:
-    
+
     DEBUG = True
 
     # ------------------------------ #
@@ -124,7 +124,7 @@ class SoraContext:
 
     # setup engine
     @classmethod
-    def initialize(cls, options: dict):
+    def initialize(cls, options: dict = {}):
         """Initialize Sora Engine with options."""
         cls.FPS = options["fps"] if "fps" in options else 60
         cls.WSIZE = options["window_size"] if "window_size" in options else [1280, 720]
@@ -150,6 +150,7 @@ class SoraContext:
     # window/camera data
     WINDOW = None
     FRAMEBUFFER = None
+    DEBUGBUFFER = None
     CLOCK = None
     RUNNING = False
     
@@ -158,6 +159,7 @@ class SoraContext:
         """Creates window context and Framebuffer for Sora Engine."""
         cls.WINDOW = pygame.display.set_mode(cls.WSIZE, cls.WFLAGS, cls.WBITS)
         cls.FRAMEBUFFER = pygame.Surface(cls.FSIZE, cls.FFLAGS, cls.FBITS)
+        cls.DEBUGBUFFER = pygame.Surface(cls.FSIZE, cls.FFLAGS | pygame.SRCALPHA, cls.FBITS)
         cls.CLOCK = pygame.time.Clock()
         cls.RUNNING = True
     
@@ -167,11 +169,20 @@ class SoraContext:
         if cls.MODERNGL:
             # push frame buffer to moderngl window context
             mgl.ModernGL.render(mgl.Texture.pg2gltex(cls.FRAMEBUFFER, "fb"))
+            if cls.DEBUG:
+                mgl.ModernGL.render(mgl.Texture.pg2gltex(cls.DEBUGBUFFER, "debug"))
             pygame.display.flip()
         else:
             # render frame buffer texture to window!
             cls.WINDOW.blit(pygame.transform.scale(cls.FRAMEBUFFER, cls.WSIZE), (0,0))
+            cls.WINDOW.blit(pygame.transform.scale(cls.DEBUGBUFFER, cls.WSIZE), (0,0))
             pygame.display.update()
+
+    @classmethod
+    def refresh_buffers(cls, color):
+        """Refreshes framebuffer and debugbuffer"""
+        cls.FRAMEBUFFER.fill(color)
+        cls.DEBUGBUFFER.fill((0, 0, 0, 0))
 
     @classmethod
     def update_window_resize(cls, event):
@@ -199,6 +210,7 @@ class SoraContext:
     @classmethod
     def update_mouse_press(cls, event):
         """Update mouse button press."""
+        if event.button - 1 > 3: return
         cls.MOUSE_BUTTONS[event.button - 1] = True
         cls.MOUSE_PRESSED.add(event.button - 1)
 
@@ -217,6 +229,10 @@ class SoraContext:
     # hardware data -- input [keyboard]
     KEYBOARD_KEYS = {}
     KEYBOARD_PRESSED = set()
+
+    # ensure that the error does not occur
+    for i in range(0, 3000):
+        KEYBOARD_KEYS[i] = False
     
     @classmethod
     def update_keyboard_down(cls, event):
@@ -263,6 +279,8 @@ class SoraContext:
     @classmethod
     def is_key_pressed(cls, key):
         """Returns if key is pressed."""
+        if not key in cls.KEYBOARD_KEYS:
+            cls.KEYBOARD_KEYS[key] = False
         return cls.KEYBOARD_KEYS[key]
 
     @classmethod

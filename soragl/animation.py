@@ -1,13 +1,13 @@
-import engine
+import soragl
 
-if engine.SoraContext.DEBUG:
+if soragl.SoraContext.DEBUG:
     print("Activated animation.py")
 
 import pygame
 import json
 import os
 
-from engine import misc
+from soragl import misc
 
 
 # ------------------------------ #
@@ -103,7 +103,7 @@ class SequenceRegistry:
         self.findex = 0
         self.f = 0
         self.fdata = parent.get_frame_data(self.f)
-        self.timer = engine.SoraContext.get_timer(limit=self.fdata.duration, loop=True)
+        self.timer = soragl.SoraContext.get_timer(limit=self.fdata.duration, loop=True)
 
     def update(self):
         self.timer.update()
@@ -193,7 +193,7 @@ class Category:
         frames = data["frames"]
         # parse frames
         pframes = {}
-        spritesheet = engine.SoraContext.load_image(os.path.join(parent_folder, meta["image"]))
+        spritesheet = soragl.SoraContext.load_image(os.path.join(parent_folder, meta["image"]))
         for f in frames:
             name = f["filename"]
             frame = f["frame"]

@@ -14,6 +14,12 @@ from array import array
 import pygame.math as pgmath
 
 
+# ------------------------------------------------------------ #
+# moderngl object -- :l
+# ------------------------------------------------------------ #
+
+
+# moderngl singleton
 class ModernGL:
     # ------------------------------ #
     # modern gl globals
@@ -92,8 +98,6 @@ class ModernGL:
 
 # ------------------------------ #
 # textures
-
-
 class Texture:
     """
     Texture class
@@ -161,10 +165,60 @@ class Texture:
         return cls.TEXTURES[texname]
 
 
+# texture handler
+class TextureHandler:
+    def __init__(self):
+        """Create TextureHandler object"""
+        self.textures = []
+        self._tex_id_buf = struct.pack(
+            "9i", *[i for i in range(9)]
+        )  # TODO: add this -->  , mgl.GL_STATIC_DRAW / DYNAMIC DRAW
+
+    def add_texture(self, texture):
+        """Adds a texture to the handler"""
+        self.textures.append(texture)
+
+    def get_texture(self, index):
+        """Gets a texture from the handler"""
+        return self.textures[index]
+
+    def remove_texture(self, index):
+        """Removes a texture from the handler"""
+        self.textures.pop(index)
+
+    def get_textures(self):
+        """Gets all textures from the handler"""
+        return self.textures
+
+    def get_texture_count(self):
+        """Gets the number of textures in the handler"""
+        return len(self.textures)
+
+    def bind_textures(self, vao, var_name: str):
+        """Binds all textures in the handler"""
+        for i in range(1, len(self.textures) + 1):
+            self.textures[i - 1].use(location=i)
+        vao.change_uniform_vector(var_name, self._tex_id_buf)
+
+    def unbind_textures(self):
+        """Unbinds all textures in the handler"""
+        for i in range(len(self.textures)):
+            self.textures[i].use(location=0)
+
+    def clear_textures(self):
+        """Clears all textures in the handler"""
+        self.textures = []
+
+    def load_texture(self, image: str):
+        """Loads a texture from a file."""
+        self.textures.append(Texture.load_texture(image))
+
+
 # ------------------------------ #
 # shaders
 
 
+# step
 class ShaderStep:
     """
     Shader Steps!!!
@@ -186,6 +240,7 @@ class ShaderStep:
         self.shader = shadersnippet[len(self.SNIPPETS[self.shadertype]) + 2 :]
 
 
+# program
 class ShaderProgram:
     """
     Takes input file.glsl and compiles it into a shader program.
@@ -254,8 +309,6 @@ class ShaderProgram:
 
 # ------------------------------ #
 # buffers!
-
-
 class Buffer:
     """
     Buffer class
@@ -270,7 +323,27 @@ class Buffer:
         # create ctx buffer
         self.buffer = ModernGL.CTX.buffer(packed)
 
+    def get_buffer(self):
+        """Get the buffer"""
+        return self.buffer
 
+    def get_raw(self):
+        """Get the raw buffer"""
+        return self.rawbuf
+
+    def update_raw(self, data: list):
+        """Update the raw buffer"""
+        self.rawbuf = data.copy()
+        self.update_buffer()
+
+    def update_buffer(self):
+        """Update the buffer"""
+        packed = struct.pack(self.parse, *self.rawbuf)
+        self.buffer.write(packed)
+
+
+# ------------------------------ #
+# vertex attribute object
 class VAO:
     """
     Vertex Attribute Objects
@@ -332,11 +405,13 @@ class VAO:
         ShaderProgram.SHADERS[self.shader].update_uniforms(self.shader, self.uniforms)
         self.vao.render(mode=mode)
 
+    def get_shader(self) -> str:
+        """Get the shader"""
+        return self.shader
+
 
 # ------------------------------ #
 # camera
-
-
 class Camera:
     def __init__(self, pos, front, up, rot):
         # private

@@ -5,7 +5,6 @@ import time
 
 
 class SoraContext:
-
     DEBUG = True
 
     # ------------------------------ #
@@ -33,7 +32,7 @@ class SoraContext:
         cls.ENGINE_UPTIME += cls.DELTA
         # update all clocks
         cls.update_global_clocks()
-    
+
     @classmethod
     def pause_time(cls, t: float):
         """Pauses time for a certain amount of time."""
@@ -43,7 +42,7 @@ class SoraContext:
     def get_current_time(cls):
         """Returns the current system time"""
         return cls.START_TIME
-    
+
     # ------------------------------ #
     # global clock queue
     ALL_CLOCKS = {}
@@ -54,20 +53,20 @@ class SoraContext:
     def deactivate_timer(cls, timer):
         """Deactivate a timer"""
         cls.REMOVE_ARR.add(timer.hash)
-    
+
     @classmethod
     def activate_timer(cls, timer):
         """Activate a timer"""
         cls.ACTIVE_CLOCKS.add(timer.hash)
-    
+
     @classmethod
-    def get_timer(cls, limit: float=0, loop: bool=False):
+    def get_timer(cls, limit: float = 0, loop: bool = False):
         """Get a timer object"""
         c = SoraContext.Timer(limit, loop)
         cls.ALL_CLOCKS[c.hash] = c
         cls.activate_timer(c)
         return c
-    
+
     @classmethod
     def update_global_clocks(cls):
         """Update all active clocks"""
@@ -81,7 +80,7 @@ class SoraContext:
     # timer class
 
     class Timer:
-        def __init__(self, limit:float, loop:bool):
+        def __init__(self, limit: float, loop: bool):
             self.hash = hash(self)
             self.initial = SoraContext.get_current_time()
             self.passed = 0
@@ -100,8 +99,8 @@ class SoraContext:
                 self.loopcount += 1
                 if not self.loop:
                     SoraContext.deactivate_timer(self)
-        
-        def reset_timer(self, time:float=0):
+
+        def reset_timer(self, time: float = 0):
             """Reset the timer"""
             self.initial = SoraContext.get_current_time()
             self.passed = 0
@@ -128,10 +127,20 @@ class SoraContext:
         """Initialize Sora Engine with options."""
         cls.FPS = options["fps"] if "fps" in options else 60
         cls.WSIZE = options["window_size"] if "window_size" in options else [1280, 720]
-        cls.WFLAGS = options["window_flags"] if "window_flags" in options else pygame.RESIZABLE | pygame.DOUBLEBUF
+        cls.WFLAGS = (
+            options["window_flags"]
+            if "window_flags" in options
+            else pygame.RESIZABLE | pygame.DOUBLEBUF
+        )
         cls.WBITS = options["window_bits"] if "window_bits" in options else 32
-        cls.FFLAGS = options["framebuffer_flags"] if "framebuffer_flags" in options else pygame.SRCALPHA
-        cls.FSIZE = options["framebuffer_size"] if "framebuffer_size" in options else cls.WSIZE
+        cls.FFLAGS = (
+            options["framebuffer_flags"]
+            if "framebuffer_flags" in options
+            else pygame.SRCALPHA
+        )
+        cls.FSIZE = (
+            options["framebuffer_size"] if "framebuffer_size" in options else cls.WSIZE
+        )
         cls.FBITS = options["framebuffer_bits"] if "framebuffer_bits" in options else 32
         cls.DEBUG = options["debug"] if "debug" in options else False
         # add options as required!
@@ -153,16 +162,18 @@ class SoraContext:
     DEBUGBUFFER = None
     CLOCK = None
     RUNNING = False
-    
+
     @classmethod
     def create_context(cls):
         """Creates window context and Framebuffer for Sora Engine."""
         cls.WINDOW = pygame.display.set_mode(cls.WSIZE, cls.WFLAGS, cls.WBITS)
         cls.FRAMEBUFFER = pygame.Surface(cls.FSIZE, cls.FFLAGS, cls.FBITS)
-        cls.DEBUGBUFFER = pygame.Surface(cls.FSIZE, cls.FFLAGS | pygame.SRCALPHA, cls.FBITS)
+        cls.DEBUGBUFFER = pygame.Surface(
+            cls.FSIZE, cls.FFLAGS | pygame.SRCALPHA, cls.FBITS
+        )
         cls.CLOCK = pygame.time.Clock()
         cls.RUNNING = True
-    
+
     @classmethod
     def push_framebuffer(cls):
         """Pushes framebuffer to window."""
@@ -174,8 +185,8 @@ class SoraContext:
             pygame.display.flip()
         else:
             # render frame buffer texture to window!
-            cls.WINDOW.blit(pygame.transform.scale(cls.FRAMEBUFFER, cls.WSIZE), (0,0))
-            cls.WINDOW.blit(pygame.transform.scale(cls.DEBUGBUFFER, cls.WSIZE), (0,0))
+            cls.WINDOW.blit(pygame.transform.scale(cls.FRAMEBUFFER, cls.WSIZE), (0, 0))
+            cls.WINDOW.blit(pygame.transform.scale(cls.DEBUGBUFFER, cls.WSIZE), (0, 0))
             pygame.display.update()
 
     @classmethod
@@ -191,7 +202,7 @@ class SoraContext:
         cls.WSIZE[0], cls.WSIZE[1] = event.x, event.y
 
     # TODO - changing fb res
-    
+
     # ------------------------------ #
     # hardware data -- input [mouse]
     MOUSE_POS = [0, 0]
@@ -210,7 +221,8 @@ class SoraContext:
     @classmethod
     def update_mouse_press(cls, event):
         """Update mouse button press."""
-        if event.button - 1 > 3: return
+        if event.button - 1 > 3:
+            return
         cls.MOUSE_BUTTONS[event.button - 1] = True
         cls.MOUSE_PRESSED.add(event.button - 1)
 
@@ -218,13 +230,13 @@ class SoraContext:
     def update_mouse_release(cls, event):
         """Update mouse button release."""
         cls.MOUSE_BUTTONS[event.button - 1] = False
-    
+
     @classmethod
     def update_mouse_scroll(cls, event):
         """Update mouse scroll."""
         cls.MOUSE_SCROLL[0], cls.MOUSE_SCROLL[1] = event.rel
         cls.MOUSE_SCROLL_POS[0], cls.MOUSE_SCROLL_POS[1] = event.pos
-    
+
     # ------------------------------ #
     # hardware data -- input [keyboard]
     KEYBOARD_KEYS = {}
@@ -233,18 +245,18 @@ class SoraContext:
     # ensure that the error does not occur
     for i in range(0, 3000):
         KEYBOARD_KEYS[i] = False
-    
+
     @classmethod
     def update_keyboard_down(cls, event):
         """Update keyboard key press."""
         cls.KEYBOARD_KEYS[event.key] = True
         cls.KEYBOARD_PRESSED.add(event.key)
-    
+
     @classmethod
     def update_keyboard_up(cls, event):
         """Update keyboard key release."""
         cls.KEYBOARD_KEYS[event.key] = False
-    
+
     # ------------------------------ #
     # hardware data -- input [key + mouse]
 
@@ -255,17 +267,20 @@ class SoraContext:
         cls.MOUSE_PRESSED.clear()
         cls.MOUSE_SCROLL = [0, 0]
         cls.KEYBOARD_PRESSED.clear()
-    
+
     @classmethod
     def get_mouse_rel(cls):
         """Returns mouse position."""
-        return (cls.MOUSE_POS[0] / cls.WSIZE[0] * cls.FSIZE[0], cls.MOUSE_POS[1] / cls.WSIZE[1] * cls.FSIZE[1])
+        return (
+            cls.MOUSE_POS[0] / cls.WSIZE[0] * cls.FSIZE[0],
+            cls.MOUSE_POS[1] / cls.WSIZE[1] * cls.FSIZE[1],
+        )
 
     @classmethod
     def get_mouse_abs(cls):
         """Returns mouse position."""
         return (cls.MOUSE_POS[0], cls.MOUSE_POS[1])
-    
+
     @classmethod
     def is_mouse_pressed(cls, button):
         """Returns if mouse button is pressed."""
@@ -275,7 +290,7 @@ class SoraContext:
     def is_mouse_clicked(cls, button):
         """Returns if mouse button is clicked."""
         return button in cls.MOUSE_PRESSED
-    
+
     @classmethod
     def is_key_pressed(cls, key):
         """Returns if key is pressed."""
@@ -335,7 +350,7 @@ class SoraContext:
     def scale_image(cls, image, size):
         """Scales image to size."""
         return pygame.transform.scale(image, size)
-    
+
     @classmethod
     def load_and_scale(cls, image, size):
         """Loads and scales image to size."""
@@ -358,18 +373,18 @@ class SoraContext:
     def play_audio(cls, path, channel):
         """Plays audio on channel."""
         cls.CHANNELS[channel].play(cls.load_audio(path))
-    
+
     @classmethod
     def play_music(cls, path):
         """Plays music."""
         pygame.mixer.music.load(path)
         pygame.mixer.music.play(-1)
-    
+
     @classmethod
     def stop_music(cls):
         """Stops music."""
         pygame.mixer.music.stop()
-    
+
     @classmethod
     def set_volume(cls, volume):
         """Sets volume."""

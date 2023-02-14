@@ -197,7 +197,7 @@ battrib.create_structure(box, bind)
 # vertex = x, y, z, u, v, r, g, b, a, texnum
 # 10 items
 vertices = mgl.Buffer(
-    "40f",
+    "80f",
     [
         # bottom left, ccw
         -1.0,
@@ -243,10 +243,57 @@ vertices = mgl.Buffer(
         1.0,
         1.0,
         0.0,
+        #
+        #
+        # second
+        # bottom left, ccw
+        -3.0,
+        -3.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        # bottom right
+        -1.0,
+        -3.0,
+        1.0,
+        1.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        # top right
+        -1.0,
+        -1.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        # top left
+        -3.0,
+        -1.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
     ],
 )
 
-indices = mgl.Buffer("6i", [0, 1, 2, 3, 0, 2])
+indices = mgl.Buffer("12i", [0, 1, 2, 3, 0, 2, 4, 5, 6, 7, 4, 6])
 vattrib = mgl.VAO("assets/shaders/default3d.glsl")
 vattrib.add_attribute("3f", "vvert")
 vattrib.add_attribute("2f", "vuv")
@@ -270,6 +317,7 @@ battrib.change_uniform_vector("proj", camera.get_projection_matrix())
 
 thandler = mgl.TextureHandler()
 thandler.load_texture("assets/sprites/tomato-1.png")
+thandler.load_texture("assets/sprites/tomato-2.png")
 thandler.bind_textures(vattrib, "uarray")
 
 # exit()

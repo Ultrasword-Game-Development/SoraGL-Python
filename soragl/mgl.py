@@ -178,6 +178,10 @@ class TextureHandler:
         """Adds a texture to the handler"""
         self.textures.append(texture)
 
+    def create_and_add_texture(self, path: str):
+        """Create and add new texture"""
+        self.add_texture(Texture.load_texture(path))
+
     def get_texture(self, index):
         """Gets a texture from the handler"""
         return self.textures[index]
@@ -331,8 +335,9 @@ class Buffer:
         """Get the raw buffer"""
         return self.rawbuf
 
-    def update_raw(self, data: list):
+    def update_raw(self, parse: str, data: list):
         """Update the raw buffer"""
+        self.parse = parse
         self.rawbuf = data.copy()
         self.update_buffer()
 

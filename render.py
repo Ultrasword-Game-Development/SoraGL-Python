@@ -193,7 +193,6 @@ battrib.add_attribute("2f", "vuv")
 # create
 battrib.create_structure(box, bind)
 
-
 # vertex = x, y, z, u, v, r, g, b, a, texnum
 # 10 items
 vertices = mgl.Buffer(
@@ -319,6 +318,12 @@ thandler = mgl.TextureHandler()
 thandler.load_texture("assets/sprites/tomato-1.png")
 thandler.load_texture("assets/sprites/tomato-2.png")
 thandler.bind_textures(vattrib, "uarray")
+
+# ------------------------------ #
+# loading models
+
+tmodel = model.MTLObjLoader("assets/models/model")
+tmodel.load()
 
 # exit()
 

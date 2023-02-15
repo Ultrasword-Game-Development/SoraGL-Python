@@ -86,7 +86,8 @@ class MTLObjLoader(Loader):
 
     def load(self):
         """Load the mtl + obj file data"""
-        # load obj file
+        # load obj file -- http://web.cse.ohio-state.edu/~shen.94/581/Site/Lab3_files/Labhelp_Obj_parser.htm
+
         with open(self._obj, "r") as file:
             data = file.read()
         for line in data.split("\n"):

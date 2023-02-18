@@ -10,6 +10,7 @@ import glm
 import struct
 import math
 from array import array
+import numpy as np
 
 import pygame.math as pgmath
 
@@ -270,10 +271,11 @@ class ShaderProgram:
             fragment_shader=self.sections[1].shader,
         )
 
-    def update_uniforms(self, s: str, uniforms: dict):
+    @classmethod
+    def update_uniforms(cls, s: str, uniforms: dict):
         """Update uniforms"""
         tcount = 0
-        shader = ShaderProgram.SHADERS[s]
+        shader = cls.SHADERS[s]
         for uni in uniforms:
             # check if texture type
             try:
@@ -319,13 +321,13 @@ class Buffer:
     - handles buffers = vao, vbo, ibo, buffers!
     """
 
-    def __init__(self, parse: str, data: list):
+    def __init__(self, parse: str, data: list, dynamic=False):
         """Create a Buffer object"""
         self.rawbuf = data.copy()
         self.parse = parse
         packed = struct.pack(parse, *self.rawbuf)
         # create ctx buffer
-        self.buffer = ModernGL.CTX.buffer(packed)
+        self.buffer = ModernGL.CTX.buffer(packed, dynamic=dynamic)
 
     def get_buffer(self):
         """Get the buffer"""
@@ -346,6 +348,49 @@ class Buffer:
         packed = struct.pack(self.parse, *self.rawbuf)
         self.buffer.write(packed)
 
+    def render(self):
+        """Render the buffer"""
+        pass
+
+
+# ------------------------------ #
+# uniform handler
+class UniformHandler:
+    """
+    Uniform Handler
+    - handles uniform values
+    """
+
+    SCALAR = 0
+    VECTOR = 1
+
+    def __init__(self, shader_path: str = ShaderProgram.DEFAULT):
+        """Creates an empty uniform handler"""
+        self.uniforms = {}
+        self.shader = shader_path
+        # load the shader in mgl context
+        ShaderProgram.load_shader(shader_path)
+
+    def change_uniform_scalar(self, name: str, value):
+        """Change a uniform value"""
+        self.uniforms[name] = (value, self.SCALAR)
+
+    def change_uniform_vector(self, name: str, value):
+        """Change a uniform value"""
+        self.uniforms[name] = (value, self.VECTOR)
+
+    def __getitem__(self, key):
+        """Get an item"""
+        return self.uniforms[key]
+
+    def __setitem__(self, key, value):
+        """Set an item"""
+        self.uniforms[key] = value
+
+    def update(self):
+        """Update the uniforms"""
+        ShaderProgram.update_uniforms(self.shader, self.uniforms)
+
 
 # ------------------------------ #
 # vertex attribute object
@@ -364,10 +409,8 @@ class VAO:
         self.vbo = None
         self.ibo = None
         self.vao = None
-        self.uniforms = {}
+        self.uniforms = UniformHandler(shader_path)
         self.shader = shader_path
-        # load the shader in mgl context
-        ShaderProgram.load_shader(shader_path)
         self.initialized = False
 
     def add_attribute(self, parse: str, var_name: str):
@@ -376,29 +419,51 @@ class VAO:
 
     def change_uniform_scalar(self, name: str, value):
         """Change a uniform value"""
-        self.uniforms[name] = (value, self.SCALAR)
+        self.uniforms.change_uniform_scalar(name, value)
 
     def change_uniform_vector(self, name: str, value):
         """Change a uniform value"""
-        self.uniforms[name] = (value, self.VECTOR)
+        self.uniforms.change_uniform_vector(name, value)
 
     def get_uniform(self, name: str):
         """Get a uniform value"""
         return self.uniforms[name]
 
-    def create_structure(self, vbo, ibo):
+    def create_structure(self, vbo, ibo=None):
         """Creates the gl context for the vao"""
         self.vbo = vbo
         self.ibo = ibo
-        self.glvbo = self.vbo.buffer
-        self.glibo = self.ibo.buffer
-        # create the v attrib string
-        blob = []
-        vattrib = " ".join([i[0] for i in self.attributes])
-        blob.append(tuple([self.glvbo, vattrib] + list(i[1] for i in self.attributes)))
-        self.vao = ModernGL.CTX.vertex_array(
-            ShaderProgram.SHADERS[self.shader].program, blob, self.glibo
-        )
+        # check if there are ibo
+        if ibo:
+            self.glvbo = self.vbo.buffer
+            self.glibo = self.ibo.buffer
+            # create the v attrib string
+            blob = []
+            vattrib = " ".join([i[0] for i in self.attributes])
+            blob.append(
+                tuple([self.glvbo, vattrib] + list(i[1] for i in self.attributes))
+            )
+            # vao object
+            self.vao = ModernGL.CTX.vertex_array(
+                ShaderProgram.SHADERS[self.shader].program, blob, self.glibo
+            )
+        else:
+            self.glvbo = self.vbo.buffer
+            vertices = np.asarray(self.vbo.rawbuf, dtype=np.float32)
+            faces = np.arange(len(vertices), dtype=np.int32)
+            # create index buffer for vertices
+            points = ModernGL.CTX.buffer(faces)
+
+            # create the v attrib string
+            blob = []
+            vattrib = " ".join([i[0] for i in self.attributes])
+            blob.append(
+                tuple([self.glvbo, vattrib] + list(i[1] for i in self.attributes))
+            )
+            # vao object
+            self.vao = ModernGL.CTX.vertex_array(
+                ShaderProgram.SHADERS[self.shader].program, blob, points
+            )
         self.initialized = True
         # done?
 
@@ -407,7 +472,7 @@ class VAO:
         if not self.initialized:
             raise Exception("VAO has not yet been initialized!")
         # update uniform variables!
-        ShaderProgram.SHADERS[self.shader].update_uniforms(self.shader, self.uniforms)
+        self.uniforms.update()
         self.vao.render(mode=mode)
 
     def get_shader(self) -> str:

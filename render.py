@@ -325,6 +325,13 @@ thandler.bind_textures(vattrib, "uarray")
 tmodel = model.MTLObjLoader("assets/models/model")
 tmodel.load()
 
+sample = tmodel.get_object("cube")
+samplehandler = mgl.VAO("assets/shaders/model.glsl")
+samplehandler.add_attribute("3f", "vvert")
+samplehandler.add_attribute("2f", "vuv")
+samplehandler.add_attribute("3f", "vnorm")
+samplehandler.create_structure(sample._vbuffer)
+
 # exit()
 
 MLOCK = misc.MouseLocking(0.5, 0.5)
@@ -337,7 +344,6 @@ while SORA.RUNNING:
     # pygame update + render
     if SORA.is_key_clicked(pygame.K_d) and SORA.is_key_pressed(pygame.K_LSHIFT):
         SORA.DEBUG = not SORA.DEBUG
-
     # testing
     if SORA.is_key_pressed(pygame.K_d):
         camera.r_translate(SPEED * SORA.DELTA, 0, 0)
@@ -351,26 +357,16 @@ while SORA.RUNNING:
         camera.r_translate(0, SPEED * SORA.DELTA, 0)
     if SORA.is_key_pressed(pygame.K_LSHIFT):
         camera.r_translate(0, -SPEED * SORA.DELTA, 0)
-
     if SORA.is_key_clicked(pygame.K_ESCAPE):
         MLOCK.locked = not MLOCK.locked
         MLOCK.hidden = not MLOCK.hidden
-
     MLOCK.update()
     # calculate rotation
     camera.rotate(MLOCK.delta[0] * 300, -MLOCK.delta[1] * 300, 0)
     camera.pitch = smath.__clamp__(camera.pitch, -89.0, 89.0)
-
-    # mouse movement for rotation
-    # print(camera.position, camera.rotation, camera.target)
-
     # ------------------------------ #
     # render
-
-    vattrib.change_uniform_vector("view", camera.get_view_matrix())
-    battrib.change_uniform_vector("view", camera.get_view_matrix())
-
-    # moderngl render
+    # moderngl context update
     ModernGL.CTX.screen.use()
     ModernGL.update_context()
     ModernGL.CTX.clear(
@@ -380,6 +376,22 @@ while SORA.RUNNING:
         ModernGL.CLEARCOLOR[3],
     )
     ModernGL.CTX.enable(mgl.moderngl.BLEND)
+
+    # now to render the model
+    thandler.bind_textures(vattrib, "uarray")
+    # print(samplehandler.uniforms)
+    samplehandler.change_uniform_scalar("tex", 1)
+    samplehandler.change_uniform_vector("view", camera.get_view_matrix())
+    samplehandler.change_uniform_vector("proj", camera.get_projection_matrix())
+    model = glm.mat4(1)
+    model = glm.translate(model, glm.vec3(1, 0, 0))
+    model = glm.rotate(model, glm.radians(20.0), glm.vec3(1.0, 0.3, 0.5))
+    samplehandler.change_uniform_vector("model", model)
+    samplehandler.render(mode=mgl.moderngl.TRIANGLES)
+
+    # rendering
+    vattrib.change_uniform_vector("view", camera.get_view_matrix())
+    battrib.change_uniform_vector("view", camera.get_view_matrix())
 
     vattrib.render(mode=mgl.moderngl.TRIANGLES)
     for i, cube in enumerate(cubes):

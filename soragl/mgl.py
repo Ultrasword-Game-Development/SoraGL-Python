@@ -105,43 +105,6 @@ class Texture:
     - handles textures, pygame to gltex conversion, loading textures, etc
     """
 
-    def __init__(self, path: str, pos: list, size: list = None, scale: list = None):
-        """Create Texture object"""
-        self.path = path
-        self.pos = pos
-        self.size = size
-        self.scale = scale
-        self.sprite = Texture.load_texture(self.path)
-        if not self.size and not self.scale:
-            # assume original size
-            self.scale = [1, 1]
-            self.size = list(self.sprite.get_size())
-        elif self.size:
-            self.sprite = soragl.SoraContext.scale_image(self.sprite, self.size)
-        elif self.scale:
-            self.size = list(self.sprite.get_size())
-            self.sprite = soragl.SoraContext.scale_image(
-                self.sprite,
-                (self.size[0] * self.scale[9], self.size[1] * self.scale[1]),
-            )
-        # texture is now loaded + scaled if required
-
-    def use(self, location=0):
-        """Use the texture"""
-        self.sprite.use(location=location)
-
-    def get_size(self):
-        """Get the size of the texture"""
-        return self.size
-
-    def get_pos(self):
-        """Get the position of the texture"""
-        return self.pos
-
-    def get_scale(self):
-        """Get the scale of the texture"""
-        return self.scale
-
     # ------------------------------ #
     TEXTURES = {}
 
@@ -164,6 +127,20 @@ class Texture:
         tdata = surface.get_view("1")
         cls.TEXTURES[texname].write(tdata)
         return cls.TEXTURES[texname]
+        return self.texture.height
+
+    # ------------------------------ #
+    def __init__(self, texture):
+        """Load texture with other data"""
+        self.texture = texture
+        self.data = {}
+
+    def set_data(self, data):
+        """Set texture data"""
+        self.data = data
+
+    def use(self, location=0):
+        self.texture.use(location)
 
 
 # texture handler

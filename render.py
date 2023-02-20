@@ -168,21 +168,12 @@ bind = mgl.Buffer(
         1,
     ],
 )
-cubes = [
-    glm.vec3(0, 2, 0),
-    glm.vec3(0, 0, 1),
-    glm.vec3(2, 0, 2),
-    glm.vec3(-2, -1, 3),
-    glm.vec3(-0.23, 2, 4),
-]
+cubes = [glm.vec3(np.random.uniform(-10, 10, 3)) for _ in range(10)]
 
 # TODO: later
 scales = [
-    glm.vec3(1, 1, 1),
-    glm.vec3(1, 1, 1),
-    glm.vec3(1, 1, 1),
-    glm.vec3(1, 1, 1),
-    glm.vec3(2, 2, 2),
+    glm.mat4([x, 0, 0, 0], [0, x, 0, 0], [0, 0, x, 0], [0, 0, 0, 1])
+    for x in np.linspace(1, 4, 10)
 ]
 
 # ------------------------------ #
@@ -332,6 +323,16 @@ samplehandler.add_attribute("2f", "vuv")
 samplehandler.add_attribute("3f", "vnorm")
 samplehandler.create_structure(sample._vbuffer)
 
+# default uniforms
+model = glm.mat4(1)
+model = glm.translate(model, glm.vec3(1, 0, 0))
+model = glm.rotate(model, glm.radians(20.0), glm.vec3(1.0, 0.3, 0.5))
+samplehandler.change_uniform_vector("model", model)
+
+scale = glm.mat4(1)
+scale = glm.scale(scale, glm.vec3(5, 5, 5))
+samplehandler.change_uniform_vector("scale", scale)
+
 # exit()
 
 MLOCK = misc.MouseLocking(0.5, 0.5)
@@ -378,17 +379,15 @@ while SORA.RUNNING:
     ModernGL.CTX.enable(mgl.moderngl.BLEND)
 
     # now to render the model
-    thandler.bind_textures(vattrib, "uarray")
     # print(samplehandler.uniforms)
+
+    sample._texture.use(1)
     samplehandler.change_uniform_scalar("tex", 1)
     samplehandler.change_uniform_vector("view", camera.get_view_matrix())
     samplehandler.change_uniform_vector("proj", camera.get_projection_matrix())
-    model = glm.mat4(1)
-    model = glm.translate(model, glm.vec3(1, 0, 0))
-    model = glm.rotate(model, glm.radians(20.0), glm.vec3(1.0, 0.3, 0.5))
-    samplehandler.change_uniform_vector("model", model)
     samplehandler.render(mode=mgl.moderngl.TRIANGLES)
 
+    thandler.bind_textures(vattrib, "uarray")
     # rendering
     vattrib.change_uniform_vector("view", camera.get_view_matrix())
     battrib.change_uniform_vector("view", camera.get_view_matrix())
@@ -401,7 +400,7 @@ while SORA.RUNNING:
         model = glm.rotate(model, glm.radians(angle), glm.vec3(1.0, 0.3, 0.5))
 
         battrib.change_uniform_vector("model", model)
-        # battrib.change_uniform_vector("scale", scales[i])
+        battrib.change_uniform_vector("scale", scales[i])
         battrib.render(mode=mgl.moderngl.TRIANGLES)
     ModernGL.CTX.disable(mgl.moderngl.BLEND)
 

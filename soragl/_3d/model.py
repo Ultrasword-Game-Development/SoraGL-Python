@@ -76,7 +76,8 @@ class Loader:
         self._path = path
 
         # load data into buffers
-        self._textures = mgl.TextureHandler()
+        # self._textures = mgl.TextureHandler()
+        self._textures = {}
         self._vao = mgl.VAO()
         self._vbo = mgl.Buffer("1f", [1.0])
 
@@ -107,9 +108,6 @@ class MTLObjLoader(Loader):
         _dir = os.listdir(path)
         # find certain files
         self._obj = Loader.find_file_ext(path, self.OBJ_EXT)
-        # load all textures
-        for f in Loader.find_files_with_ext(path, self.IMG_EXT):
-            self._textures.create_and_add_texture(f)
         # config for mtl file
         self._config = {}
         # results
@@ -139,29 +137,34 @@ class MTLObjLoader(Loader):
         for line in data.split("\n"):
             if not line or line[0] == "#":
                 continue
-            if line.startswith("mtllib"):
-                # load mtl file
-                self.load_mtl(os.path.join(self._path, line.split()[1]))
             # parsing
-            elif line[0] == "o":
-                # if has old
+            words = line.split()
+            if words[0] == "mtllib":
+                # load mtl file
+                self.load_mtl(os.path.join(self._path, words[1]))
+            elif words[0] == "o":
                 if current_object:
                     objects[current_object] = reference
                 # make new
-                current_object = line.split()[1]
+                current_object = words[1]
                 # new obj -- 0 = vertices, 1 = uv, 2 = normal, 3 = faces
-                reference = ([], [], [], [])
-                objects[current_object] = reference
-            elif line.startswith("vt"):
+                reference = {
+                    "vertices": [],
+                    "uv": [],
+                    "normal": [],
+                    "faces": [],
+                    "texture": None,
+                }
+            elif words[0] == "vt":
                 vt = tuple(map(float, line.split()[1:]))
-                reference[1].append(vt)
-            elif line.startswith("vn"):
+                reference["uv"].append(vt)
+            elif words[0] == "vn":
                 vn = tuple(map(float, line.split()[1:]))
-                reference[2].append(vn)
-            elif line[0] == "v":
+                reference["normal"].append(vn)
+            elif words[0] == "v":
                 v = tuple(map(float, line.split()[1:]))
-                reference[0].append(v)
-            elif line.startswith("f"):
+                reference["vertices"].append(v)
+            elif words[0] == "f":
                 # vertex/texture/normal -- texture + normal are optional
                 # -1 == does not exist
                 face = []
@@ -174,16 +177,26 @@ class MTLObjLoader(Loader):
                     face.append(r)
                 # 0, 1, 2 || 2, 3, 0
                 # add 2 Face objects to reference in above order
-                reference[3].append(Face(face[0], face[1], face[2]))
-                reference[3].append(Face(face[2], face[3], face[0]))
+                reference["faces"].append(Face(face[0], face[1], face[2]))
+                reference["faces"].append(Face(face[2], face[3], face[0]))
+            elif words[0] == "usemtl":
+                # use material
+                # print(self._textures)
+                reference["texture"] = self._textures[words[1]]
         objects[current_object] = reference
 
         # iterate thorugh each of the remaeining objects and construct the vertex buffer using the data found in the faces
         for name, data in objects.items():
             # get data
-            vertices, uvs, normals, faces = data
+            vertices, uvs, normals, faces = (
+                data["vertices"],
+                data["uv"],
+                data["normal"],
+                data["faces"],
+            )
+            # get texture
+            texture = data["texture"]
             print("Finish texture laoding + mtl")
-            textures = []
             # create buffer
             buffer = []
             for face in faces:
@@ -198,7 +211,7 @@ class MTLObjLoader(Loader):
                     buffer.extend(vn)
             # add to results
             vertex_buffer = mgl.Buffer(f"{len(buffer)}f", buffer)
-            self._results[name] = Model(vertex_buffer, textures)
+            self._results[name] = Model(vertex_buffer, texture)
         return self._results
 
     def load_mtl(self, path: str):
@@ -206,7 +219,56 @@ class MTLObjLoader(Loader):
         # load mtl file
         with open(path, "r") as file:
             # load data
-            pass
+            data = file.read()
+        # split into lines
+        current_material = None
+        current_data = {}
+        for line in data.split("\n"):
+            if line.startswith("#"):
+                continue
+            # split into words
+            words = line.split()
+            if words[0] == "newmtl":
+                # new material
+                if current_material:
+                    # print(current_data)
+                    self._textures[current_material] = self.texture_form_data(
+                        current_data
+                    )
+                current_material = words[1]
+                current_data = {}
+            elif words[0] == "map_Kd":
+                path = os.path.join(self._path, words[1] + ".png")
+                # load texture
+                texture = mgl.Texture
+                current_data["texture"] = mgl.Texture.load_texture(path)
+                current_data["path"] = path
+            elif words[0] == "Kd":
+                # diffuse color
+                current_data["diffuse"] = tuple(map(float, words[1:]))
+            elif words[0] == "Ka":
+                # ambient color
+                current_data["ambient"] = tuple(map(float, words[1:]))
+            elif words[0] == "Ks":
+                # specular color
+                current_data["specular"] = tuple(map(float, words[1:]))
+            elif words[0] == "Ns":
+                # specular exponent
+                current_data["specular_exponent"] = float(words[1])
+            elif words[0] == "d" or words[0] == "Tr":
+                # alpha
+                current_data["alpha"] = float(words[1])
+        # add last material
+        if not current_material == "none":
+            self._textures[current_material] = current_data
+
+    def texture_form_data(self, data: dict):
+        """Create a texture from data"""
+        # create texture
+        texture = mgl.Texture(mgl.Texture.load_texture(data["path"]))
+        # set texture data
+        texture.set_data(data)
+        return texture
 
     def get_object(self, name: str):
         """Get an object by name"""

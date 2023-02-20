@@ -10,10 +10,17 @@ import glm
 import struct
 import math
 from array import array
+import numpy as np
 
 import pygame.math as pgmath
 
 
+# ------------------------------------------------------------ #
+# moderngl object -- :l
+# ------------------------------------------------------------ #
+
+
+# moderngl singleton
 class ModernGL:
     # ------------------------------ #
     # modern gl globals
@@ -92,50 +99,11 @@ class ModernGL:
 
 # ------------------------------ #
 # textures
-
-
 class Texture:
     """
     Texture class
     - handles textures, pygame to gltex conversion, loading textures, etc
     """
-
-    def __init__(self, path: str, pos: list, size: list = None, scale: list = None):
-        """Create Texture object"""
-        self.path = path
-        self.pos = pos
-        self.size = size
-        self.scale = scale
-        self.sprite = Texture.load_texture(self.path)
-        if not self.size and not self.scale:
-            # assume original size
-            self.scale = [1, 1]
-            self.size = list(self.sprite.get_size())
-        elif self.size:
-            self.sprite = soragl.SoraContext.scale_image(self.sprite, self.size)
-        elif self.scale:
-            self.size = list(self.sprite.get_size())
-            self.sprite = soragl.SoraContext.scale_image(
-                self.sprite,
-                (self.size[0] * self.scale[9], self.size[1] * self.scale[1]),
-            )
-        # texture is now loaded + scaled if required
-
-    def use(self, location=0):
-        """Use the texture"""
-        self.sprite.use(location=location)
-
-    def get_size(self):
-        """Get the size of the texture"""
-        return self.size
-
-    def get_pos(self):
-        """Get the position of the texture"""
-        return self.pos
-
-    def get_scale(self):
-        """Get the scale of the texture"""
-        return self.scale
 
     # ------------------------------ #
     TEXTURES = {}
@@ -159,12 +127,80 @@ class Texture:
         tdata = surface.get_view("1")
         cls.TEXTURES[texname].write(tdata)
         return cls.TEXTURES[texname]
+        return self.texture.height
+
+    # ------------------------------ #
+    def __init__(self, texture):
+        """Load texture with other data"""
+        self.texture = texture
+        self.data = {}
+
+    def set_data(self, data):
+        """Set texture data"""
+        self.data = data
+
+    def use(self, location=0):
+        self.texture.use(location)
+
+
+# texture handler
+class TextureHandler:
+    def __init__(self):
+        """Create TextureHandler object"""
+        self.textures = []
+        self._tex_id_buf = struct.pack(
+            "9i", *[i for i in range(9)]
+        )  # TODO: add this -->  , mgl.GL_STATIC_DRAW / DYNAMIC DRAW
+
+    def add_texture(self, texture):
+        """Adds a texture to the handler"""
+        self.textures.append(texture)
+
+    def create_and_add_texture(self, path: str):
+        """Create and add new texture"""
+        self.add_texture(Texture.load_texture(path))
+
+    def get_texture(self, index):
+        """Gets a texture from the handler"""
+        return self.textures[index]
+
+    def remove_texture(self, index):
+        """Removes a texture from the handler"""
+        self.textures.pop(index)
+
+    def get_textures(self):
+        """Gets all textures from the handler"""
+        return self.textures
+
+    def get_texture_count(self):
+        """Gets the number of textures in the handler"""
+        return len(self.textures)
+
+    def bind_textures(self, vao, var_name: str):
+        """Binds all textures in the handler"""
+        for i in range(1, len(self.textures) + 1):
+            self.textures[i - 1].use(location=i)
+        vao.change_uniform_vector(var_name, self._tex_id_buf)
+
+    def unbind_textures(self):
+        """Unbinds all textures in the handler"""
+        for i in range(len(self.textures)):
+            self.textures[i].use(location=0)
+
+    def clear_textures(self):
+        """Clears all textures in the handler"""
+        self.textures = []
+
+    def load_texture(self, image: str):
+        """Loads a texture from a file."""
+        self.textures.append(Texture.load_texture(image))
 
 
 # ------------------------------ #
 # shaders
 
 
+# step
 class ShaderStep:
     """
     Shader Steps!!!
@@ -186,6 +222,7 @@ class ShaderStep:
         self.shader = shadersnippet[len(self.SNIPPETS[self.shadertype]) + 2 :]
 
 
+# program
 class ShaderProgram:
     """
     Takes input file.glsl and compiles it into a shader program.
@@ -211,10 +248,11 @@ class ShaderProgram:
             fragment_shader=self.sections[1].shader,
         )
 
-    def update_uniforms(self, s: str, uniforms: dict):
+    @classmethod
+    def update_uniforms(cls, s: str, uniforms: dict):
         """Update uniforms"""
         tcount = 0
-        shader = ShaderProgram.SHADERS[s]
+        shader = cls.SHADERS[s]
         for uni in uniforms:
             # check if texture type
             try:
@@ -254,23 +292,85 @@ class ShaderProgram:
 
 # ------------------------------ #
 # buffers!
-
-
 class Buffer:
     """
     Buffer class
     - handles buffers = vao, vbo, ibo, buffers!
     """
 
-    def __init__(self, parse: str, data: list):
+    def __init__(self, parse: str, data: list, dynamic=False):
         """Create a Buffer object"""
         self.rawbuf = data.copy()
         self.parse = parse
         packed = struct.pack(parse, *self.rawbuf)
         # create ctx buffer
-        self.buffer = ModernGL.CTX.buffer(packed)
+        self.buffer = ModernGL.CTX.buffer(packed, dynamic=dynamic)
+
+    def get_buffer(self):
+        """Get the buffer"""
+        return self.buffer
+
+    def get_raw(self):
+        """Get the raw buffer"""
+        return self.rawbuf
+
+    def update_raw(self, parse: str, data: list):
+        """Update the raw buffer"""
+        self.parse = parse
+        self.rawbuf = data.copy()
+        self.update_buffer()
+
+    def update_buffer(self):
+        """Update the buffer"""
+        packed = struct.pack(self.parse, *self.rawbuf)
+        self.buffer.write(packed)
+
+    def render(self):
+        """Render the buffer"""
+        pass
 
 
+# ------------------------------ #
+# uniform handler
+class UniformHandler:
+    """
+    Uniform Handler
+    - handles uniform values
+    """
+
+    SCALAR = 0
+    VECTOR = 1
+
+    def __init__(self, shader_path: str = ShaderProgram.DEFAULT):
+        """Creates an empty uniform handler"""
+        self.uniforms = {}
+        self.shader = shader_path
+        # load the shader in mgl context
+        ShaderProgram.load_shader(shader_path)
+
+    def change_uniform_scalar(self, name: str, value):
+        """Change a uniform value"""
+        self.uniforms[name] = (value, self.SCALAR)
+
+    def change_uniform_vector(self, name: str, value):
+        """Change a uniform value"""
+        self.uniforms[name] = (value, self.VECTOR)
+
+    def __getitem__(self, key):
+        """Get an item"""
+        return self.uniforms[key]
+
+    def __setitem__(self, key, value):
+        """Set an item"""
+        self.uniforms[key] = value
+
+    def update(self):
+        """Update the uniforms"""
+        ShaderProgram.update_uniforms(self.shader, self.uniforms)
+
+
+# ------------------------------ #
+# vertex attribute object
 class VAO:
     """
     Vertex Attribute Objects
@@ -286,10 +386,8 @@ class VAO:
         self.vbo = None
         self.ibo = None
         self.vao = None
-        self.uniforms = {}
+        self.uniforms = UniformHandler(shader_path)
         self.shader = shader_path
-        # load the shader in mgl context
-        ShaderProgram.load_shader(shader_path)
         self.initialized = False
 
     def add_attribute(self, parse: str, var_name: str):
@@ -298,29 +396,51 @@ class VAO:
 
     def change_uniform_scalar(self, name: str, value):
         """Change a uniform value"""
-        self.uniforms[name] = (value, self.SCALAR)
+        self.uniforms.change_uniform_scalar(name, value)
 
     def change_uniform_vector(self, name: str, value):
         """Change a uniform value"""
-        self.uniforms[name] = (value, self.VECTOR)
+        self.uniforms.change_uniform_vector(name, value)
 
     def get_uniform(self, name: str):
         """Get a uniform value"""
         return self.uniforms[name]
 
-    def create_structure(self, vbo, ibo):
+    def create_structure(self, vbo, ibo=None):
         """Creates the gl context for the vao"""
         self.vbo = vbo
         self.ibo = ibo
-        self.glvbo = self.vbo.buffer
-        self.glibo = self.ibo.buffer
-        # create the v attrib string
-        blob = []
-        vattrib = " ".join([i[0] for i in self.attributes])
-        blob.append(tuple([self.glvbo, vattrib] + list(i[1] for i in self.attributes)))
-        self.vao = ModernGL.CTX.vertex_array(
-            ShaderProgram.SHADERS[self.shader].program, blob, self.glibo
-        )
+        # check if there are ibo
+        if ibo:
+            self.glvbo = self.vbo.buffer
+            self.glibo = self.ibo.buffer
+            # create the v attrib string
+            blob = []
+            vattrib = " ".join([i[0] for i in self.attributes])
+            blob.append(
+                tuple([self.glvbo, vattrib] + list(i[1] for i in self.attributes))
+            )
+            # vao object
+            self.vao = ModernGL.CTX.vertex_array(
+                ShaderProgram.SHADERS[self.shader].program, blob, self.glibo
+            )
+        else:
+            self.glvbo = self.vbo.buffer
+            vertices = np.asarray(self.vbo.rawbuf, dtype=np.float32)
+            faces = np.arange(len(vertices), dtype=np.int32)
+            # create index buffer for vertices
+            points = ModernGL.CTX.buffer(faces)
+
+            # create the v attrib string
+            blob = []
+            vattrib = " ".join([i[0] for i in self.attributes])
+            blob.append(
+                tuple([self.glvbo, vattrib] + list(i[1] for i in self.attributes))
+            )
+            # vao object
+            self.vao = ModernGL.CTX.vertex_array(
+                ShaderProgram.SHADERS[self.shader].program, blob, points
+            )
         self.initialized = True
         # done?
 
@@ -329,14 +449,16 @@ class VAO:
         if not self.initialized:
             raise Exception("VAO has not yet been initialized!")
         # update uniform variables!
-        ShaderProgram.SHADERS[self.shader].update_uniforms(self.shader, self.uniforms)
+        self.uniforms.update()
         self.vao.render(mode=mode)
+
+    def get_shader(self) -> str:
+        """Get the shader"""
+        return self.shader
 
 
 # ------------------------------ #
 # camera
-
-
 class Camera:
     def __init__(self, pos, front, up, rot):
         # private

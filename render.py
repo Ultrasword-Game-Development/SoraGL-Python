@@ -7,7 +7,9 @@ import numpy as np
 
 from pygame import draw as pgdraw
 from pygame import math as pgmath
-from soragl import animation, scene, physics, base_objects, misc
+from soragl import animation, scene, physics, base_objects, misc, smath
+
+from soragl._3d import model
 
 # ------------------------------ #
 # setup
@@ -74,16 +76,19 @@ box = mgl.Buffer(
         -0.5,
         0.0,
         0.0,
+        #
         0.5,
         -0.5,
         -0.5,
         1.0,
         0.0,
+        #
         0.5,
         0.5,
         -0.5,
         1.0,
         1.0,
+        #
         -0.5,
         0.5,
         -0.5,
@@ -96,16 +101,19 @@ box = mgl.Buffer(
         0.5,
         0.0,
         0.0,
+        #
         0.5,
         -0.5,
         0.5,
         1.0,
         0.0,
+        #
         0.5,
         0.5,
         0.5,
         1.0,
         1.0,
+        #
         -0.5,
         0.5,
         0.5,
@@ -160,22 +168,15 @@ bind = mgl.Buffer(
         1,
     ],
 )
+cubes = [glm.vec3(np.random.uniform(-10, 10, 3)) for _ in range(10)]
 
-cubes = [
-    glm.vec3(0, 2, 0),
-    glm.vec3(0, 0, 1),
-    glm.vec3(2, 0, 2),
-    glm.vec3(-2, -1, 3),
-    glm.vec3(-0.23, 2, 4),
-]
-
+# TODO: later
 scales = [
-    glm.vec3(1, 1, 1),
-    glm.vec3(1, 1, 1),
-    glm.vec3(1, 1, 1),
-    glm.vec3(1, 1, 1),
-    glm.vec3(2, 2, 2),
+    glm.mat4([x, 0, 0, 0], [0, x, 0, 0], [0, 0, x, 0], [0, 0, 0, 1])
+    for x in np.linspace(1, 4, 10)
 ]
+
+# ------------------------------ #
 
 battrib = mgl.VAO("assets/shaders/3testing.glsl")
 battrib.add_attribute("3f", "vvert")
@@ -183,32 +184,61 @@ battrib.add_attribute("2f", "vuv")
 # create
 battrib.create_structure(box, bind)
 
-
-# vertex = x, y, z, u, v, r, g, b, a
-# 9 items
+# vertex = x, y, z, u, v, r, g, b, a, texnum
+# 10 items
 vertices = mgl.Buffer(
-    "36f",
+    "80f",
     [
         # bottom left, ccw
         -1.0,
         -1.0,
         0.0,
         0.0,
-        0.0,
+        1.0,
         1.0,
         0.0,
         0.0,
         1.0,
+        0.0,
+        # bottom right
         1.0,
         -1.0,
         0.0,
         1.0,
-        0.0,
-        0.0,
         1.0,
         0.0,
         1.0,
+        0.0,
         1.0,
+        0.0,
+        # top right
+        1.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        # top left
+        -1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.0,
+        #
+        #
+        # second
+        # bottom left, ccw
+        -3.0,
+        -3.0,
         1.0,
         0.0,
         1.0,
@@ -217,6 +247,30 @@ vertices = mgl.Buffer(
         0.0,
         1.0,
         1.0,
+        # bottom right
+        -1.0,
+        -3.0,
+        1.0,
+        1.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        # top right
+        -1.0,
+        -1.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        # top left
+        -3.0,
         -1.0,
         1.0,
         0.0,
@@ -229,11 +283,12 @@ vertices = mgl.Buffer(
     ],
 )
 
-indices = mgl.Buffer("6i", [0, 1, 2, 3, 0, 2])
+indices = mgl.Buffer("12i", [0, 1, 2, 3, 0, 2, 4, 5, 6, 7, 4, 6])
 vattrib = mgl.VAO("assets/shaders/default3d.glsl")
 vattrib.add_attribute("3f", "vvert")
 vattrib.add_attribute("2f", "vuv")
 vattrib.add_attribute("4f", "vcolor")
+vattrib.add_attribute("1f", "vtex")
 # add attribs?
 vattrib.create_structure(vertices, indices)
 
@@ -247,6 +302,37 @@ vattrib.change_uniform_vector("proj", camera.get_projection_matrix())
 battrib.change_uniform_vector("view", camera.get_view_matrix())
 battrib.change_uniform_vector("proj", camera.get_projection_matrix())
 
+# ------------------------------ #
+# textures
+
+thandler = mgl.TextureHandler()
+thandler.load_texture("assets/sprites/tomato-1.png")
+thandler.load_texture("assets/sprites/tomato-2.png")
+thandler.bind_textures(vattrib, "uarray")
+
+# ------------------------------ #
+# loading models
+
+tmodel = model.MTLObjLoader("assets/models/model")
+tmodel.load()
+
+sample = tmodel.get_object("cube")
+samplehandler = mgl.VAO("assets/shaders/model.glsl")
+samplehandler.add_attribute("3f", "vvert")
+samplehandler.add_attribute("2f", "vuv")
+samplehandler.add_attribute("3f", "vnorm")
+samplehandler.create_structure(sample._vbuffer)
+
+# default uniforms
+model = glm.mat4(1)
+model = glm.translate(model, glm.vec3(1, 0, 0))
+model = glm.rotate(model, glm.radians(20.0), glm.vec3(1.0, 0.3, 0.5))
+samplehandler.change_uniform_vector("model", model)
+
+scale = glm.mat4(1)
+scale = glm.scale(scale, glm.vec3(5, 5, 5))
+samplehandler.change_uniform_vector("scale", scale)
+
 # exit()
 
 MLOCK = misc.MouseLocking(0.5, 0.5)
@@ -259,7 +345,6 @@ while SORA.RUNNING:
     # pygame update + render
     if SORA.is_key_clicked(pygame.K_d) and SORA.is_key_pressed(pygame.K_LSHIFT):
         SORA.DEBUG = not SORA.DEBUG
-
     # testing
     if SORA.is_key_pressed(pygame.K_d):
         camera.r_translate(SPEED * SORA.DELTA, 0, 0)
@@ -269,21 +354,20 @@ while SORA.RUNNING:
         camera.r_translate(0, 0, SPEED * SORA.DELTA)
     if SORA.is_key_pressed(pygame.K_s):
         camera.r_translate(0, 0, -SPEED * SORA.DELTA)
-
+    if SORA.is_key_pressed(pygame.K_SPACE):
+        camera.r_translate(0, SPEED * SORA.DELTA, 0)
+    if SORA.is_key_pressed(pygame.K_LSHIFT):
+        camera.r_translate(0, -SPEED * SORA.DELTA, 0)
     if SORA.is_key_clicked(pygame.K_ESCAPE):
         MLOCK.locked = not MLOCK.locked
         MLOCK.hidden = not MLOCK.hidden
-
     MLOCK.update()
     # calculate rotation
     camera.rotate(MLOCK.delta[0] * 300, -MLOCK.delta[1] * 300, 0)
-    # mouse movement for rotation
-    print(camera.position, camera.rotation, camera.target)
-
-    vattrib.change_uniform_vector("view", camera.get_view_matrix())
-    battrib.change_uniform_vector("view", camera.get_view_matrix())
-
-    # moderngl render
+    camera.pitch = smath.__clamp__(camera.pitch, -89.0, 89.0)
+    # ------------------------------ #
+    # render
+    # moderngl context update
     ModernGL.CTX.screen.use()
     ModernGL.update_context()
     ModernGL.CTX.clear(
@@ -294,6 +378,20 @@ while SORA.RUNNING:
     )
     ModernGL.CTX.enable(mgl.moderngl.BLEND)
 
+    # now to render the model
+    # print(samplehandler.uniforms)
+
+    sample._texture.use(1)
+    samplehandler.change_uniform_scalar("tex", 1)
+    samplehandler.change_uniform_vector("view", camera.get_view_matrix())
+    samplehandler.change_uniform_vector("proj", camera.get_projection_matrix())
+    samplehandler.render(mode=mgl.moderngl.TRIANGLES)
+
+    thandler.bind_textures(vattrib, "uarray")
+    # rendering
+    vattrib.change_uniform_vector("view", camera.get_view_matrix())
+    battrib.change_uniform_vector("view", camera.get_view_matrix())
+
     vattrib.render(mode=mgl.moderngl.TRIANGLES)
     for i, cube in enumerate(cubes):
         model = glm.mat4(1)
@@ -302,9 +400,13 @@ while SORA.RUNNING:
         model = glm.rotate(model, glm.radians(angle), glm.vec3(1.0, 0.3, 0.5))
 
         battrib.change_uniform_vector("model", model)
-        # battrib.change_uniform_vector("scale", scales[i])
+        battrib.change_uniform_vector("scale", scales[i])
         battrib.render(mode=mgl.moderngl.TRIANGLES)
     ModernGL.CTX.disable(mgl.moderngl.BLEND)
+
+    thandler.unbind_textures()
+
+    # ------------------------------ #
 
     # push frame
     # SORA.push_framebuffer()

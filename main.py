@@ -8,16 +8,18 @@ from soragl import animation, scene, physics, base_objects
 
 # ------------------------------ #
 # setup
-SORA = soragl.SoraContext.initialize({
-        "fps": 30, 
-        "window_size": [1280, 720], 
-        "window_flags": pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF, 
-        "window_bits": 32, 
-        "framebuffer_flags": pygame.SRCALPHA, 
-        "framebuffer_size": [1280//3, 720//3], 
+SORA = soragl.SoraContext.initialize(
+    {
+        "fps": 30,
+        "window_size": [1280, 720],
+        "window_flags": pygame.RESIZABLE | pygame.OPENGL | pygame.DOUBLEBUF,
+        "window_bits": 32,
+        "framebuffer_flags": pygame.SRCALPHA,
+        "framebuffer_size": [1280 // 3, 720 // 3],
         "framebuffer_bits": 32,
         "debug": True,
-})
+    }
+)
 
 SORA.create_context()
 
@@ -26,32 +28,70 @@ SORA.create_context()
 if SORA.is_flag_active(pygame.OPENGL):
     from soragl import mgl
     from soragl.mgl import ModernGL
-    print('Configured Pygame for OpenGL')
+
+    print("Configured Pygame for OpenGL")
 
 
 # ------------------------------ #
 # post setup
 
-ModernGL.create_context(options={
-            "standalone": False, 
-            "gc_mode": "context_gc", 
-            "clear_color": [0.0, 0.0, 0.0, 1.0], 
-    })
+ModernGL.create_context(
+    options={
+        "standalone": False,
+        "gc_mode": "context_gc",
+        "clear_color": [0.0, 0.0, 0.0, 1.0],
+    }
+)
 
 shader = mgl.ShaderProgram("assets/shaders/default.glsl")
 # shader = mgl.ShaderProgram("assets/shaders/default3d.glsl")
 
-vertices = mgl.Buffer('36f',  [
-        -1.0, -1.0, 0.0,    0.0, 1.0,    1.0, 0.0, 0.0, 1.0,
-        1.0, -1.0, 1.0,     1.0, 1.0,    0.0, 1.0, 0.0, 1.0,
-        1.0, 1.0, 1.0,      1.0, 0.0,    0.0, 0.0, 1.0, 1.0,
-        -1.0, 1.0, 0.0,     0.0, 0.0,    1.0, 1.0, 1.0, 1.0
-])
-indices = mgl.Buffer('6i', [0, 1, 2, 3, 0, 2])
+vertices = mgl.Buffer(
+    "36f",
+    [
+        -1.0,
+        -1.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        -1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.0,
+        1.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        -1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+    ],
+)
+indices = mgl.Buffer("6i", [0, 1, 2, 3, 0, 2])
 vattrib = mgl.VAO("assets/shaders/default.glsl")
-vattrib.add_attribute('3f', 'vvert')
-vattrib.add_attribute('2f', 'vuv')
-vattrib.add_attribute('4f', 'vcolor')
+vattrib.add_attribute("3f", "vvert")
+vattrib.add_attribute("2f", "vuv")
+vattrib.add_attribute("4f", "vcolor")
 # add attribs?
 vattrib.create_structure(vertices, indices)
 
@@ -71,12 +111,14 @@ ERRORS:
 
 
 animation.Category.load_category("assets/sprites/tomato.json")
-registry = animation.Category.get_category_framedata("assets/sprites/tomato.json")["idle"].get_registry()
+registry = animation.Category.get_category_framedata("assets/sprites/tomato.json")[
+    "idle"
+].get_registry()
 
 
 image = SORA.load_image("assets/sprites/tomato.png")
 potato = SORA.load_image("assets/sprites/potato-2.png")
-__ss = animation.SpriteSheet(SORA.load_image("assets/sprites/stages.png"), 16, 16, 0, 0)
+__ss = animation.SpriteSheet(image, 16, 16, 0, 0)
 
 sc = scene.Scene(config=scene.load_config(scene.Scene.DEFAULT_CONFIG))
 scw = sc.make_layer(sc.get_config(), 1)
@@ -84,8 +126,10 @@ scw.get_chunk(0, 0)
 
 sce1 = physics.Entity()
 sce2 = physics.Entity()
-sce3particle = physics.ParticleHandler(create_func=physics.ParticleHandler.DEFAULT_CREATE, 
-                update_func=physics.ParticleHandler.DEFAULT_UPDATE)
+sce3particle = physics.ParticleHandler(
+    create_func=physics.ParticleHandler.DEFAULT_CREATE,
+    update_func=physics.ParticleHandler.DEFAULT_UPDATE,
+)
 sce3particle.position += (100, 100)
 sce4particle = physics.ParticleHandler(create_func="square", update_func="square")
 sce4particle.position += (200, 100)
@@ -167,16 +211,25 @@ while SORA.RUNNING:
 
     # moderngl render
     ModernGL.update_context()
-    ModernGL.CTX.clear(ModernGL.CLEARCOLOR[0], ModernGL.CLEARCOLOR[1], ModernGL.CLEARCOLOR[2], ModernGL.CLEARCOLOR[3])
+    ModernGL.CTX.clear(
+        ModernGL.CLEARCOLOR[0],
+        ModernGL.CLEARCOLOR[1],
+        ModernGL.CLEARCOLOR[2],
+        ModernGL.CLEARCOLOR[3],
+    )
     ModernGL.CTX.enable(mgl.moderngl.BLEND)
     vattrib.change_uniform_scalar("utime", SORA.ENGINE_UPTIME % 10000)
-    vattrib.change_uniform_scalar("framebuffer", mgl.Texture.pg2gltex(SORA.FRAMEBUFFER, "fb"))
-    vattrib.change_uniform_scalar("debugbuffer", mgl.Texture.pg2gltex(SORA.DEBUGBUFFER, "db"))
+    vattrib.change_uniform_scalar(
+        "framebuffer", mgl.Texture.pg2gltex(SORA.FRAMEBUFFER, "fb")
+    )
+    vattrib.change_uniform_scalar(
+        "debugbuffer", mgl.Texture.pg2gltex(SORA.DEBUGBUFFER, "db")
+    )
 
     # vao.render(mode=mgl.moderngl.TRIANGLES)
     vattrib.render()
     ModernGL.CTX.disable(mgl.moderngl.BLEND)
-    
+
     # push frame
     # SORA.push_framebuffer()
     pygame.display.flip()
@@ -188,4 +241,3 @@ while SORA.RUNNING:
     SORA.update_time()
 
 pygame.quit()
-

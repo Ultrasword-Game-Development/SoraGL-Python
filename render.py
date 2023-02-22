@@ -316,7 +316,8 @@ thandler.bind_textures(vattrib, "uarray")
 tmodel = model.MTLObjLoader("assets/models/model")
 tmodel.load()
 
-sample = tmodel.get_object("cube")
+# sample = tmodel.get_object("sphere")
+sample = tmodel.get_object("cube 2")
 samplehandler = mgl.VAO("assets/shaders/model.glsl")
 samplehandler.add_attribute("3f", "vvert")
 samplehandler.add_attribute("2f", "vuv")
@@ -329,9 +330,12 @@ model = glm.translate(model, glm.vec3(1, 0, 0))
 model = glm.rotate(model, glm.radians(20.0), glm.vec3(1.0, 0.3, 0.5))
 samplehandler.change_uniform_vector("model", model)
 
-scale = glm.mat4(1)
-scale = glm.scale(scale, glm.vec3(5, 5, 5))
-samplehandler.change_uniform_vector("scale", scale)
+samplescales = [
+    glm.scale(glm.mat4(1), glm.vec3(5, 5, 5)),
+    glm.scale(glm.mat4(1), glm.vec3(6, 6, 6)),
+]
+
+samplehandler.change_uniform_vector("scale", samplescales[0])
 
 # exit()
 

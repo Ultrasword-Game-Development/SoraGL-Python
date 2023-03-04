@@ -127,7 +127,6 @@ class Texture:
         tdata = surface.get_view("1")
         cls.TEXTURES[texname].write(tdata)
         return cls.TEXTURES[texname]
-        return self.texture.height
 
     # ------------------------------ #
     def __init__(self, texture):

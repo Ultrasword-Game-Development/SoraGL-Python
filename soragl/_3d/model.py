@@ -134,6 +134,10 @@ class MTLObjLoader(Loader):
         current_object = None
         reference = None
 
+        vertices = []
+        uvcoords = []
+        normals = []
+
         for line in data.split("\n"):
             if not line or line[0] == "#":
                 continue
@@ -141,29 +145,29 @@ class MTLObjLoader(Loader):
             words = line.split()
             if words[0] == "mtllib":
                 # load mtl file
-                self.load_mtl(os.path.join(self._path, words[1]))
+                self.load_mtl(os.path.join(self._path, " ".join(words[1:])))
             elif words[0] == "o":
                 if current_object:
+                    # if current_object in objects:
+                    #     current_object += "(1)"
+                    # what if objects have same name?
                     objects[current_object] = reference
                 # make new
-                current_object = words[1]
+                current_object = " ".join(words[1:])
                 # new obj -- 0 = vertices, 1 = uv, 2 = normal, 3 = faces
                 reference = {
-                    "vertices": [],
-                    "uv": [],
-                    "normal": [],
                     "faces": [],
                     "texture": None,
                 }
             elif words[0] == "vt":
                 vt = tuple(map(float, line.split()[1:]))
-                reference["uv"].append(vt)
+                uvcoords.append(vt)
             elif words[0] == "vn":
                 vn = tuple(map(float, line.split()[1:]))
-                reference["normal"].append(vn)
+                normals.append(vn)
             elif words[0] == "v":
                 v = tuple(map(float, line.split()[1:]))
-                reference["vertices"].append(v)
+                vertices.append(v)
             elif words[0] == "f":
                 # vertex/texture/normal -- texture + normal are optional
                 # -1 == does not exist
@@ -175,35 +179,36 @@ class MTLObjLoader(Loader):
                             continue
                         r.append(int(i))
                     face.append(r)
-                # 0, 1, 2 || 2, 3, 0
-                # add 2 Face objects to reference in above order
-                reference["faces"].append(Face(face[0], face[1], face[2]))
-                reference["faces"].append(Face(face[2], face[3], face[0]))
+                # check for size
+                if len(face) == 4:
+                    # 0, 1, 2 || 2, 3, 0
+                    # add 2 Face objects to reference in above order
+                    reference["faces"].append(Face(face[0], face[1], face[2]))
+                    reference["faces"].append(Face(face[2], face[3], face[0]))
+                elif len(face) == 3:
+                    reference["faces"].append(Face(face[0], face[1], face[2]))
             elif words[0] == "usemtl":
                 # use material
                 # print(self._textures)
+                if words[1] == "none":
+                    continue
                 reference["texture"] = self._textures[words[1]]
         objects[current_object] = reference
 
         # iterate thorugh each of the remaeining objects and construct the vertex buffer using the data found in the faces
         for name, data in objects.items():
             # get data
-            vertices, uvs, normals, faces = (
-                data["vertices"],
-                data["uv"],
-                data["normal"],
-                data["faces"],
-            )
+            faces = data["faces"]
             # get texture
             texture = data["texture"]
-            print("Finish texture laoding + mtl")
             # create buffer
             buffer = []
             for face in faces:
                 for vertex in face:
                     # get vertex data
+                    # print(current_object, vertex, vertices)
                     v = vertices[vertex[0] - 1]
-                    vt = uvs[vertex[1] - 1]
+                    vt = uvcoords[vertex[1] - 1]
                     vn = normals[vertex[2] - 1]
                     # add to buffer
                     buffer.extend(v)

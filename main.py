@@ -1,14 +1,14 @@
 import pygame
-import soragl
+import soragl as SORA
 import struct
 
 from pygame import draw as pgdraw
 from pygame import math as pgmath
-from soragl import animation, scene, physics, base_objects
+from soragl import animation, scene, physics, base_objects, mgl
 
 # ------------------------------ #
 # setup
-SORA = soragl.SoraContext.initialize(
+SORA.initialize(
     {
         "fps": 30,
         "window_size": [1280, 720],
@@ -35,7 +35,7 @@ if SORA.is_flag_active(pygame.OPENGL):
 # ------------------------------ #
 # post setup
 
-ModernGL.create_context(
+mgl.ModernGL.create_context(
     options={
         "standalone": False,
         "gc_mode": "context_gc",

@@ -2,8 +2,8 @@
 import json
 import pygame
 # ------------------------------------------------------------ #
-import soragl
-if soragl.SoraContext.DEBUG:
+import soragl as SORA
+if SORA.DEBUG:
     print("Activating scene.py")
 from queue import deque
 # ------------------------------------------------------------ #

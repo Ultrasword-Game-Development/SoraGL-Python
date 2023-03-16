@@ -1,6 +1,6 @@
-import soragl
+import soragl as SORA
 
-if soragl.SoraContext.DEBUG:
+if SORA.DEBUG:
     print("Activated mgl.py")
 
 from . import misc

@@ -1,5 +1,4 @@
-import soragl
-from soragl import SoraContext as SORA
+import soragl as SORA
 from soragl import scene, physics, mgl, animation, smath
 
 import random
@@ -38,17 +37,19 @@ class MissingSprite(Exception):
         super().__init__(*args)
 
 class Sprite(scene.Component):
-    def __init__(self, width: int, height: int, sprite = None):
+    def __init__(self, width: int=0, height: int=0, sprite=None):
         super().__init__()
         self.width = width
         self.height = height
-        if width < 0 or height < 0:
-            raise ValueError("Width and height must be >= 0!")
-        elif width == 0 or height == 0:
+        # if valid inputs
+        if width <= 0 and height <= 0 and not sprite:
+            raise NotImplementedError(f"Sprite {self} has no width or height or sprite!")
+        # if no sprite
+        if width <= 0 or height <= 0:
             self._sprite = sprite
             self.width, self.height = self._sprite.get_size()
         else:
-            self._sprite = soragl.SoraContext.scale_image(sprite, (width, height)) if sprite else sprite
+            self._sprite = SORA.scale_image(sprite, (width, height)) if sprite is None else SORA.make_surface
         self.hwidth = self.width // 2
         self.hheight = self.height // 2
         # print(self.width, self.height, self._sprite)

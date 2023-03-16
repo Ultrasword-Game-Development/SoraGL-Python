@@ -4,397 +4,389 @@ import pygame
 import time
 
 
-class SoraContext:
-    DEBUG = True
+DEBUG = True
 
-    # ------------------------------ #
-    # time + time + time
-    ENGINE_UPTIME = 0
-    ENGINE_START_TIME = 0
+# ------------------------------------------------ #
+# time + time + time
+# ------------------------------------------------ #
 
-    START_TIME = 0
-    END_TIME = 0
-    DELTA = 0
+ENGINE_UPTIME = 0
+ENGINE_START_TIME = 0
 
-    @classmethod
-    def start_engine_time(cls):
-        """Starts engine time."""
-        cls.ENGINE_START_TIME = time.time()
-        cls.START_TIME = cls.ENGINE_START_TIME
-        cls.update_time()
+START_TIME = 0
+END_TIME = 0
+DELTA = 0
 
-    @classmethod
-    def update_time(cls):
-        """Updates time."""
-        cls.END_TIME = time.time()
-        cls.DELTA = cls.END_TIME - cls.START_TIME
-        cls.START_TIME = cls.END_TIME
-        cls.ENGINE_UPTIME += cls.DELTA
-        # update all clocks
-        cls.update_global_clocks()
 
-    @classmethod
-    def pause_time(cls, t: float):
-        """Pauses time for a certain amount of time."""
-        time.sleep(t)
+def start_engine_time():
+    """Starts engine time."""
+    global ENGINE_START_TIME, START_TIME, END_TIME, DELTA
+    ENGINE_START_TIME = time.time()
+    START_TIME = ENGINE_START_TIME
+    update_time()
 
-    @classmethod
-    def get_current_time(cls):
-        """Returns the current system time"""
-        return cls.START_TIME
+def update_time():
+    """Updates time."""
+    global START_TIME, END_TIME, DELTA, ENGINE_UPTIME
+    END_TIME = time.time()
+    DELTA = END_TIME - START_TIME
+    START_TIME = END_TIME
+    ENGINE_UPTIME += DELTA
+    # update all clocks
+    update_global_clocks()
 
-    # ------------------------------ #
-    # global clock queue
-    ALL_CLOCKS = {}
-    ACTIVE_CLOCKS = set()
-    REMOVE_ARR = set()
+def pause_time(t: float):
+    """Pauses time for a certain amount of time."""
+    time.sleep(t)
 
-    @classmethod
-    def deactivate_timer(cls, timer):
-        """Deactivate a timer"""
-        cls.REMOVE_ARR.add(timer.hash)
+def get_current_time():
+    """Returns the current system time"""
+    return START_TIME
 
-    @classmethod
-    def activate_timer(cls, timer):
-        """Activate a timer"""
-        cls.ACTIVE_CLOCKS.add(timer.hash)
+# ------------------------------------------------ #
+# global clock queue
+# ------------------------------------------------ #
 
-    @classmethod
-    def get_timer(cls, limit: float = 0, loop: bool = False):
-        """Get a timer object"""
-        c = SoraContext.Timer(limit, loop)
-        cls.ALL_CLOCKS[c.hash] = c
-        cls.activate_timer(c)
-        return c
+ALL_CLOCKS = {}
+ACTIVE_CLOCKS = set()
+REMOVE_ARR = set()
 
-    @classmethod
-    def update_global_clocks(cls):
-        """Update all active clocks"""
-        for c in cls.ACTIVE_CLOCKS:
-            cls.ALL_CLOCKS[c].update()
-        for c in cls.REMOVE_ARR:
-            cls.ACTIVE_CLOCKS.remove(c)
-        cls.REMOVE_ARR.clear()
 
-    # ------------------------------ #
-    # timer class
+def deactivate_timer(timer):
+    """Deactivate a timer"""
+    REMOVE_ARR.add(timer.hash)
 
-    class Timer:
-        def __init__(self, limit: float, loop: bool):
-            self.hash = hash(self)
-            self.initial = SoraContext.get_current_time()
+def activate_timer(timer):
+    """Activate a timer"""
+    ACTIVE_CLOCKS.add(timer.hash)
+
+def get_timer(limit: float = 0, loop: bool = False):
+    """Get a timer object"""
+    c = Timer(limit, loop)
+    ALL_CLOCKS[c.hash] = c
+    activate_timer(c)
+    return c
+
+def update_global_clocks():
+    """Update all active clocks"""
+    for c in ACTIVE_CLOCKS:
+        ALL_CLOCKS[c].update()
+    for c in REMOVE_ARR:
+        ACTIVE_CLOCKS.remove(c)
+    REMOVE_ARR.clear()
+
+# ------------------------------------------------ #
+# timer class
+# ------------------------------------------------ #
+
+class Timer:
+    def __init__(self, limit: float, loop: bool):
+        self.hash = hash(self)
+        self.initial = get_current_time()
+        self.passed = 0
+        self.loopcount = 0
+        self.limit = limit
+        self.loop = loop
+
+    def update(self):
+        """Updates the clock - throws a signal when finished"""
+        self.passed += DELTA
+        # to implement sending signals -- when completed!
+        # print(self.passed)
+        if self.passed > self.limit:
+            # -- emit a signal
             self.passed = 0
-            self.loopcount = 0
-            self.limit = limit
-            self.loop = loop
+            self.loopcount += 1
+            if not self.loop:
+                deactivate_timer(self)
 
-        def update(self):
-            """Updates the clock - throws a signal when finished"""
-            self.passed += SoraContext.DELTA
-            # to implement sending signals -- when completed!
-            # print(self.passed)
-            if self.passed > self.limit:
-                # -- emit a signal
-                self.passed = 0
-                self.loopcount += 1
-                if not self.loop:
-                    SoraContext.deactivate_timer(self)
+    def reset_timer(self, time: float = 0):
+        """Reset the timer"""
+        self.initial = get_current_time()
+        self.passed = 0
+        self.loopcount = 0
 
-        def reset_timer(self, time: float = 0):
-            """Reset the timer"""
-            self.initial = SoraContext.get_current_time()
-            self.passed = 0
-            self.loopcount = 0
+# ------------------------------------------------ #
+# window variables
+# ------------------------------------------------ #
 
-    # ------------------------------ #
-    # window variables
+FPS = 60
+WSIZE = [1280, 720]
+WPREVSIZE = [1280, 720]
+WFLAGS = pygame.RESIZABLE | pygame.DOUBLEBUF
+WBITS = 32
+FFLAGS = pygame.SRCALPHA
+FPREVSIZE = [1280, 720]
+FSIZE = [1280, 720]
+FBITS = 32
 
-    FPS = 60
-    WSIZE = [1280, 720]
-    WPREVSIZE = [1280, 720]
-    WFLAGS = pygame.RESIZABLE | pygame.DOUBLEBUF
-    WBITS = 32
-    FFLAGS = pygame.SRCALPHA
-    FPREVSIZE = [1280, 720]
-    FSIZE = [1280, 720]
-    FBITS = 32
+MODERNGL = False
 
-    MODERNGL = False
+# setup engine
 
-    # setup engine
-    @classmethod
-    def initialize(cls, options: dict = {}):
-        """Initialize Sora Engine with options."""
-        cls.FPS = options["fps"] if "fps" in options else 60
-        cls.WSIZE = options["window_size"] if "window_size" in options else [1280, 720]
-        cls.WFLAGS = (
-            options["window_flags"]
-            if "window_flags" in options
-            else pygame.RESIZABLE | pygame.DOUBLEBUF
-        )
-        cls.WBITS = options["window_bits"] if "window_bits" in options else 32
-        cls.FFLAGS = (
-            options["framebuffer_flags"]
-            if "framebuffer_flags" in options
-            else pygame.SRCALPHA
-        )
-        cls.FSIZE = (
-            options["framebuffer_size"] if "framebuffer_size" in options else cls.WSIZE
-        )
-        cls.FBITS = options["framebuffer_bits"] if "framebuffer_bits" in options else 32
-        cls.DEBUG = options["debug"] if "debug" in options else False
-        # add options as required!
-        cls.MODERNGL = cls.is_flag_active(pygame.OPENGL)
-        if cls.MODERNGL:
-            from . import mgl
-        return cls
+def initialize(options: dict = {}) -> None:
+    """Initialize Sora Engine with options."""
+    global FPS, WSIZE, WFLAGS, WBITS, FFLAGS, FSIZE, FBITS, MODERNGL, DEBUG
+    FPS = options["fps"] if "fps" in options else 60
+    WSIZE = options["window_size"] if "window_size" in options else [1280, 720]
+    WFLAGS = (
+        options["window_flags"]
+        if "window_flags" in options
+        else pygame.RESIZABLE | pygame.DOUBLEBUF
+    )
+    WBITS = options["window_bits"] if "window_bits" in options else 32
+    FFLAGS = (
+        options["framebuffer_flags"]
+        if "framebuffer_flags" in options
+        else pygame.SRCALPHA
+    )
+    FSIZE = (
+        options["framebuffer_size"] if "framebuffer_size" in options else WSIZE
+    )
+    FBITS = options["framebuffer_bits"] if "framebuffer_bits" in options else 32
+    DEBUG = options["debug"] if "debug" in options else False
+    # add options as required!
+    MODERNGL = is_flag_active(pygame.OPENGL)
+    if MODERNGL:
+        from . import mgl
 
-    # check if certain flags are active
-    @classmethod
-    def is_flag_active(cls, flag: int):
-        """Checks if a flag is active."""
-        return bool(cls.WFLAGS & flag)
+# check if certain flags are active
+def is_flag_active(flag: int):
+    """Checks if a flag is active."""
+    return bool(WFLAGS & flag)
 
-    # ------------------------------ #
-    # window/camera data
-    WINDOW = None
-    FRAMEBUFFER = None
-    DEBUGBUFFER = None
-    CLOCK = None
-    RUNNING = False
+# ------------------------------------------------ #
+# window/camera data
+# ------------------------------------------------ #
+WINDOW = None
+FRAMEBUFFER = None
+DEBUGBUFFER = None
+CLOCK = None
+RUNNING = False
 
-    @classmethod
-    def create_context(cls):
-        """Creates window context and Framebuffer for Sora Engine."""
-        cls.WINDOW = pygame.display.set_mode(cls.WSIZE, cls.WFLAGS, cls.WBITS)
-        cls.FRAMEBUFFER = pygame.Surface(cls.FSIZE, cls.FFLAGS, cls.FBITS)
-        cls.DEBUGBUFFER = pygame.Surface(
-            cls.FSIZE, cls.FFLAGS | pygame.SRCALPHA, cls.FBITS
-        )
-        cls.CLOCK = pygame.time.Clock()
-        cls.RUNNING = True
 
-    @classmethod
-    def push_framebuffer(cls):
-        """Pushes framebuffer to window."""
-        if cls.MODERNGL:
-            # push frame buffer to moderngl window context
-            mgl.ModernGL.render(mgl.Texture.pg2gltex(cls.FRAMEBUFFER, "fb"))
-            if cls.DEBUG:
-                mgl.ModernGL.render(mgl.Texture.pg2gltex(cls.DEBUGBUFFER, "debug"))
-            pygame.display.flip()
-        else:
-            # render frame buffer texture to window!
-            cls.WINDOW.blit(pygame.transform.scale(cls.FRAMEBUFFER, cls.WSIZE), (0, 0))
-            cls.WINDOW.blit(pygame.transform.scale(cls.DEBUGBUFFER, cls.WSIZE), (0, 0))
-            pygame.display.update()
+def create_context():
+    """Creates window context and Framebuffer for Sora Engine."""
+    global WINDOW, FRAMEBUFFER, DEBUGBUFFER, CLOCK, RUNNING
+    WINDOW = pygame.display.set_mode(WSIZE, WFLAGS, WBITS)
+    FRAMEBUFFER = pygame.Surface(FSIZE, FFLAGS, FBITS)
+    DEBUGBUFFER = pygame.Surface(
+        FSIZE, FFLAGS | pygame.SRCALPHA, FBITS
+    )
+    CLOCK = pygame.time.Clock()
+    RUNNING = True
 
-    @classmethod
-    def refresh_buffers(cls, color):
-        """Refreshes framebuffer and debugbuffer"""
-        cls.FRAMEBUFFER.fill(color)
-        cls.DEBUGBUFFER.fill((0, 0, 0, 0))
+def push_framebuffer():
+    """Pushes framebuffer to window."""
+    if MODERNGL:
+        # push frame buffer to moderngl window context
+        mgl.ModernGL.render(mgl.Texture.pg2gltex(FRAMEBUFFER, "fb"))
+        if DEBUG:
+            mgl.ModernGL.render(mgl.Texture.pg2gltex(DEBUGBUFFER, "debug"))
+        pygame.display.flip()
+    else:
+        # render frame buffer texture to window!
+        WINDOW.blit(pygame.transform.scale(FRAMEBUFFER, WSIZE), (0, 0))
+        WINDOW.blit(pygame.transform.scale(DEBUGBUFFER, WSIZE), (0, 0))
+        pygame.display.update()
 
-    @classmethod
-    def update_window_resize(cls, event):
-        """Updates window size and framebuffer size."""
-        cls.WPREVSIZE[0], cls.WPREVSIZE[1] = cls.WSIZE[0], cls.WSIZE[1]
-        cls.WSIZE[0], cls.WSIZE[1] = event.x, event.y
+def refresh_buffers(color):
+    """Refreshes framebuffer and debugbuffer"""
+    FRAMEBUFFER.fill(color)
+    DEBUGBUFFER.fill((0, 0, 0, 0))
 
-    # TODO - changing fb res
+def update_window_resize(event):
+    """Updates window size and framebuffer size."""
+    global WSIZE, WPREVSIZE, FSIZE, FPREVSIZE
+    WPREVSIZE[0], WPREVSIZE[1] = WSIZE[0], WSIZE[1]
+    WSIZE[0], WSIZE[1] = event.x, event.y
 
-    # ------------------------------ #
-    # hardware data -- input [mouse]
-    MOUSE_POS = [0, 0]
-    MOUSE_MOVE = [0, 0]
-    MOUSE_BUTTONS = [False, False, False]
-    MOUSE_PRESSED = set()
+# TODO - changing fb res
+
+# ------------------------------------------------ #
+# hardware data -- input [mouse]
+# ------------------------------------------------ #
+
+MOUSE_POS = [0, 0]
+MOUSE_MOVE = [0, 0]
+MOUSE_BUTTONS = [False, False, False]
+MOUSE_PRESSED = set()
+MOUSE_SCROLL = [0, 0]
+MOUSE_SCROLL_POS = [0, 0]
+
+
+def update_mouse_pos(event):
+    """Update mouse position."""
+    MOUSE_MOVE[0], MOUSE_MOVE[1] = event.rel
+    MOUSE_POS[0], MOUSE_POS[1] = event.pos
+
+def update_mouse_press(event):
+    """Update mouse button press."""
+    if event.button - 1 > 3:
+        return
+    MOUSE_BUTTONS[event.button - 1] = True
+    MOUSE_PRESSED.add(event.button - 1)
+
+def update_mouse_release(event):
+    """Update mouse button release."""
+    MOUSE_BUTTONS[event.button - 1] = False
+
+def update_mouse_scroll(event):
+    """Update mouse scroll."""
+    MOUSE_SCROLL[0], MOUSE_SCROLL[1] = event.rel
+    MOUSE_SCROLL_POS[0], MOUSE_SCROLL_POS[1] = event.pos
+
+# ------------------------------------------------ #
+# hardware data -- input [keyboard]
+# ------------------------------------------------ #
+
+KEYBOARD_KEYS = {}
+KEYBOARD_PRESSED = set()
+
+# ensure that the error does not occur
+for i in range(0, 3000):
+    KEYBOARD_KEYS[i] = False
+
+def update_keyboard_down(event):
+    """Update keyboard key press."""
+    KEYBOARD_KEYS[event.key] = True
+    KEYBOARD_PRESSED.add(event.key)
+
+def update_keyboard_up(event):
+    """Update keyboard key release."""
+    KEYBOARD_KEYS[event.key] = False
+
+# ------------------------------------------------ #
+# hardware data -- input [key + mouse]
+# ------------------------------------------------ #
+
+def update_hardware():
+    """Updates the mouse"""
+    global MOUSE_SCROLL
+    # print("DEBUG:", MOUSE_PRESSED, KEYBOARD_PRESSED)
+    MOUSE_PRESSED.clear()
     MOUSE_SCROLL = [0, 0]
-    MOUSE_SCROLL_POS = [0, 0]
+    KEYBOARD_PRESSED.clear()
 
-    @classmethod
-    def update_mouse_pos(cls, event):
-        """Update mouse position."""
-        cls.MOUSE_MOVE[0], cls.MOUSE_MOVE[1] = event.rel
-        cls.MOUSE_POS[0], cls.MOUSE_POS[1] = event.pos
+def get_mouse_rel():
+    """Returns mouse position."""
+    return (
+        MOUSE_POS[0] / WSIZE[0] * FSIZE[0],
+        MOUSE_POS[1] / WSIZE[1] * FSIZE[1],
+    )
 
-    @classmethod
-    def update_mouse_press(cls, event):
-        """Update mouse button press."""
-        if event.button - 1 > 3:
-            return
-        cls.MOUSE_BUTTONS[event.button - 1] = True
-        cls.MOUSE_PRESSED.add(event.button - 1)
+def get_mouse_abs():
+    """Returns mouse position."""
+    return (MOUSE_POS[0], MOUSE_POS[1])
 
-    @classmethod
-    def update_mouse_release(cls, event):
-        """Update mouse button release."""
-        cls.MOUSE_BUTTONS[event.button - 1] = False
+def is_mouse_pressed(button):
+    """Returns if mouse button is pressed."""
+    return MOUSE_BUTTONS[button]
 
-    @classmethod
-    def update_mouse_scroll(cls, event):
-        """Update mouse scroll."""
-        cls.MOUSE_SCROLL[0], cls.MOUSE_SCROLL[1] = event.rel
-        cls.MOUSE_SCROLL_POS[0], cls.MOUSE_SCROLL_POS[1] = event.pos
+def is_mouse_clicked(button):
+    """Returns if mouse button is clicked."""
+    return button in MOUSE_PRESSED
 
-    # ------------------------------ #
-    # hardware data -- input [keyboard]
-    KEYBOARD_KEYS = {}
-    KEYBOARD_PRESSED = set()
+def is_key_pressed(key):
+    """Returns if key is pressed."""
+    if not key in KEYBOARD_KEYS:
+        KEYBOARD_KEYS[key] = False
+    return KEYBOARD_KEYS[key]
 
-    # ensure that the error does not occur
-    for i in range(0, 3000):
-        KEYBOARD_KEYS[i] = False
+def is_key_clicked(key):
+    """Returns if key is clicked."""
+    return key in KEYBOARD_PRESSED
 
-    @classmethod
-    def update_keyboard_down(cls, event):
-        """Update keyboard key press."""
-        cls.KEYBOARD_KEYS[event.key] = True
-        cls.KEYBOARD_PRESSED.add(event.key)
+def handle_pygame_events():
+    """Handles pygame events."""
+    global RUNNING
+    for e in pygame.event.get():
+        if e.type == pygame.QUIT:
+            RUNNING = False
+        elif e.type == pygame.KEYDOWN:
+            # keyboard press
+            update_keyboard_down(e)
+        elif e.type == pygame.KEYUP:
+            # keyboard release
+            update_keyboard_up(e)
+        elif e.type == pygame.MOUSEMOTION:
+            # mouse movement
+            update_mouse_pos(e)
+        elif e.type == pygame.MOUSEWHEEL:
+            # mouse scroll
+            update_mouse_scroll(e)
+        elif e.type == pygame.MOUSEBUTTONDOWN:
+            # mouse press
+            update_mouse_press(e)
+        elif e.type == pygame.MOUSEBUTTONUP:
+            # mouse release
+            update_mouse_release(e)
+        elif e.type == pygame.WINDOWRESIZED:
+            # window resized
+            update_window_resize(e)
 
-    @classmethod
-    def update_keyboard_up(cls, event):
-        """Update keyboard key release."""
-        cls.KEYBOARD_KEYS[event.key] = False
+# ------------------------------------------------ #
+# filehandler
+# ------------------------------------------------ #
+IMAGES = {}
+CHANNELS = {}
+AUDIO = {}
+FONTS = {}
 
-    # ------------------------------ #
-    # hardware data -- input [key + mouse]
+# textures
+def load_image(path):
+    """Loads image from file."""
+    if path in IMAGES:
+        return IMAGES[path]
+    IMAGES[path] = pygame.image.load(path).convert_alpha()
+    return IMAGES[path]
 
-    @classmethod
-    def update_hardware(cls):
-        """Updates the mouse"""
-        # print("DEBUG:", cls.MOUSE_PRESSED, cls.KEYBOARD_PRESSED)
-        cls.MOUSE_PRESSED.clear()
-        cls.MOUSE_SCROLL = [0, 0]
-        cls.KEYBOARD_PRESSED.clear()
+def scale_image(image, size):
+    """Scales image to size."""
+    return pygame.transform.scale(image, size)
 
-    @classmethod
-    def get_mouse_rel(cls):
-        """Returns mouse position."""
-        return (
-            cls.MOUSE_POS[0] / cls.WSIZE[0] * cls.FSIZE[0],
-            cls.MOUSE_POS[1] / cls.WSIZE[1] * cls.FSIZE[1],
-        )
+def load_and_scale(image, size):
+    """Loads and scales image to size."""
+    return scale_image(load_image(image), size)
 
-    @classmethod
-    def get_mouse_abs(cls):
-        """Returns mouse position."""
-        return (cls.MOUSE_POS[0], cls.MOUSE_POS[1])
+def make_surface(width, height, flags=0, depth=32, masks=None):
+    """Creates a new surface."""
+    return pygame.Surface((width, height), flags, depth, masks)
 
-    @classmethod
-    def is_mouse_pressed(cls, button):
-        """Returns if mouse button is pressed."""
-        return cls.MOUSE_BUTTONS[button]
+# audio
+def make_channel(name):
+    """Creates a new channel."""
+    CHANNELS[name] = pygame.mixer.Channel(len(CHANNELS))
 
-    @classmethod
-    def is_mouse_clicked(cls, button):
-        """Returns if mouse button is clicked."""
-        return button in cls.MOUSE_PRESSED
+def load_audio(path):
+    """Loads audio from file."""
+    if path in AUDIO:
+        return AUDIO[path]
+    AUDIO[path] = pygame.mixer.Sound(path)
+    return AUDIO[path]
 
-    @classmethod
-    def is_key_pressed(cls, key):
-        """Returns if key is pressed."""
-        if not key in cls.KEYBOARD_KEYS:
-            cls.KEYBOARD_KEYS[key] = False
-        return cls.KEYBOARD_KEYS[key]
+def play_audio(path, channel):
+    """Plays audio on channel."""
+    CHANNELS[channel].play(load_audio(path))
 
-    @classmethod
-    def is_key_clicked(cls, key):
-        """Returns if key is clicked."""
-        return key in cls.KEYBOARD_PRESSED
+def play_music(path):
+    """Plays music."""
+    pygame.mixer.music.load(path)
+    pygame.mixer.music.play(-1)
 
-    @classmethod
-    def handle_pygame_events(cls):
-        """Handles pygame events."""
-        for e in pygame.event.get():
-            if e.type == pygame.QUIT:
-                cls.RUNNING = False
-            elif e.type == pygame.KEYDOWN:
-                # keyboard press
-                cls.update_keyboard_down(e)
-            elif e.type == pygame.KEYUP:
-                # keyboard release
-                cls.update_keyboard_up(e)
-            elif e.type == pygame.MOUSEMOTION:
-                # mouse movement
-                cls.update_mouse_pos(e)
-            elif e.type == pygame.MOUSEWHEEL:
-                # mouse scroll
-                cls.update_mouse_scroll(e)
-            elif e.type == pygame.MOUSEBUTTONDOWN:
-                # mouse press
-                cls.update_mouse_press(e)
-            elif e.type == pygame.MOUSEBUTTONUP:
-                # mouse release
-                cls.update_mouse_release(e)
-            elif e.type == pygame.WINDOWRESIZED:
-                # window resized
-                cls.update_window_resize(e)
+def stop_music():
+    """Stops music."""
+    pygame.mixer.music.stop()
 
-    # ------------------------------ #
-    # filehandler
-    IMAGES = {}
-    CHANNELS = {}
-    AUDIO = {}
-    FONTS = {}
+def set_volume(volume):
+    """Sets volume."""
+    pygame.mixer.music.set_volume(volume)
 
-    @classmethod
-    def load_image(cls, path):
-        """Loads image from file."""
-        if path in cls.IMAGES:
-            return cls.IMAGES[path]
-        cls.IMAGES[path] = pygame.image.load(path).convert_alpha()
-        return cls.IMAGES[path]
-
-    @classmethod
-    def scale_image(cls, image, size):
-        """Scales image to size."""
-        return pygame.transform.scale(image, size)
-
-    @classmethod
-    def load_and_scale(cls, image, size):
-        """Loads and scales image to size."""
-        return cls.scale_image(cls.load_image(image), size)
-
-    @classmethod
-    def make_channel(cls, name):
-        """Creates a new channel."""
-        cls.CHANNELS[name] = pygame.mixer.Channel(len(cls.CHANNELS))
-
-    @classmethod
-    def load_audio(cls, path):
-        """Loads audio from file."""
-        if path in cls.AUDIO:
-            return cls.AUDIO[path]
-        cls.AUDIO[path] = pygame.mixer.Sound(path)
-        return cls.AUDIO[path]
-
-    @classmethod
-    def play_audio(cls, path, channel):
-        """Plays audio on channel."""
-        cls.CHANNELS[channel].play(cls.load_audio(path))
-
-    @classmethod
-    def play_music(cls, path):
-        """Plays music."""
-        pygame.mixer.music.load(path)
-        pygame.mixer.music.play(-1)
-
-    @classmethod
-    def stop_music(cls):
-        """Stops music."""
-        pygame.mixer.music.stop()
-
-    @classmethod
-    def set_volume(cls, volume):
-        """Sets volume."""
-        pygame.mixer.music.set_volume(volume)
-
-    @classmethod
-    def load_font(cls, path, size):
-        """Loads font from file."""
-        fs = f"{path}|{size}"
-        if fs in cls.FONTS:
-            return cls.FONTS[fs]
-        cls.FONTS[fs] = pygame.font.Font(path, size)
-        return cls.FONTS[fs]
+# text / fonts
+def load_font(path, size):
+    """Loads font from file."""
+    fs = f"{path}|{size}"
+    if fs in FONTS:
+        return FONTS[fs]
+    FONTS[fs] = pygame.font.Font(path, size)
+    return FONTS[fs]

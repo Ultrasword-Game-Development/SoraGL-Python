@@ -2,8 +2,8 @@
 import json
 import pygame
 # ------------------------------------------------------------ #
-import soragl
-if soragl.SoraContext.DEBUG:
+import soragl as SORA
+if SORA.DEBUG:
     print("Activating scene.py")
 from queue import deque
 # ------------------------------------------------------------ #
@@ -111,8 +111,8 @@ class Chunk:
         for entity in self._intrinstic_entities:
             self._world._scene._global_entities[entity].update()
         # # debug update
-        if soragl.SoraContext.DEBUG:
-            pygame.draw.rect(soragl.SoraContext.FRAMEBUFFER, (255, 0, 0), self.rect, 1)
+        if SORA.DEBUG:
+            pygame.draw.rect(SORA.FRAMEBUFFER, (255, 0, 0), self.rect, 1)
 
 # ------------------------------ #
 # scene - aspects
@@ -324,9 +324,9 @@ class World:
     def handle_aspect_timed(self) -> list:
         """Handle the aspects"""
         for i in self._aspects:
-            st = soragl.SoraContext.get_time()
+            st = SORA.get_time()
             i.handle()
-            aspect_time = int(round((soragl.SoraContext.get_time() - st) * 1000, 3))
+            aspect_time = int(round((SORA.get_time() - st) * 1000, 3))
             self.aspect_times[i.__class__.__name__] = aspect_time
 
     #== update

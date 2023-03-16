@@ -6,7 +6,7 @@ Misc functions:
 
 import pygame
 
-from soragl import SoraContext as SORA
+import soragl as SORA
 from soragl import scene
 
 # ------------------------------------------------------------ #

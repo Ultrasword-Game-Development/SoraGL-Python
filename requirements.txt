@@ -1,0 +1,4 @@
+pygame-ce==2.1.4
+moderngl==5.7.4
+pyglm==2.7.0
+numpy==1.24.2

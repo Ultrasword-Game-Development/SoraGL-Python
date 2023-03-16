@@ -62,7 +62,7 @@ class Sprite(scene.Component):
     @sprite.setter
     def sprite(self, new):
         """Set a new sprite"""
-        self._sprite = soragl.SoraContext.scale_image(new, (self.width, self.height))
+        self._sprite = SORA.scale_image(new, (self.width, self.height))
     
     @property
     def area(self):
@@ -75,7 +75,7 @@ class Sprite(scene.Component):
         if len(new_area) != 2:
             raise NotImplementedError(f"The area {new_area} is not supported yet! {__file__} {__package__}")
         self.width, self.height = new_area
-        self.sprite = soragl.SoraContext.scale_image(self.sprite, (self.width, self.height))
+        self.sprite = SORA.scale_image(self.sprite, (self.width, self.height))
 
 class AnimatedSprite(Sprite):
     def __init__(self, width: int, height: int, registry):
@@ -131,7 +131,7 @@ class SpriteRendererAspect(scene.Aspect):
             # get the position
             pos = e.position.xy
             # render the sprite
-            soragl.SoraContext.FRAMEBUFFER.blit(c_sprite.sprite, pos - (c_sprite.hwidth, c_sprite.hheight))
+            SORA.FRAMEBUFFER.blit(c_sprite.sprite, pos - (c_sprite.hwidth, c_sprite.hheight))
 
 class SpriteRendererAspectDebug(scene.Aspect):
     def __init__(self):
@@ -444,21 +444,21 @@ def create_square_particle(parent, **kwargs):
 def update_square_particle(parent, particle):
     """Update a square particle"""
     # check if the particle is dead
-    particle[5] -= soragl.SoraContext.DELTA
+    particle[5] -= SORA.DELTA
     # print(particle)
     if particle[5] <= 0:
         parent.remove_particle(particle)
         return
     # set color value
-    particle[4][0] = int(math.sin(soragl.SoraContext.ENGINE_UPTIME) * 127 + 127)
-    particle[4][1] = int(math.cos(soragl.SoraContext.ENGINE_UPTIME) * 127 + 127)
+    particle[4][0] = int(math.sin(SORA.ENGINE_UPTIME) * 127 + 127)
+    particle[4][1] = int(math.cos(SORA.ENGINE_UPTIME) * 127 + 127)
     particle[4][2] = int(math.sin(particle[0].x) * 127 + 127)
     # just spin + move in random direction
-    particle[0] += particle[1] * soragl.SoraContext.DELTA
-    particle[2] += particle[3] * soragl.SoraContext.DELTA
+    particle[0] += particle[1] * SORA.DELTA
+    particle[2] += particle[3] * SORA.DELTA
     # render -- square (that rotates)
     points = [i.rotate(particle[2]) + particle[0] for i in particle[6]]
-    pgdraw.polygon(soragl.SoraContext.FRAMEBUFFER, particle[4], points, 1)
+    pgdraw.polygon(SORA.FRAMEBUFFER, particle[4], points, 1)
 
 # register
 physics.ParticleHandler.register_create_function("square", create_square_particle)
@@ -482,21 +482,21 @@ def create_triangle_particle(parent, **kwargs):
 def update_triangle_particle(parent, particle):
     """Update a square particle"""
     # check if the particle is dead
-    particle[5] -= soragl.SoraContext.DELTA
+    particle[5] -= SORA.DELTA
     # print(particle)
     if particle[5] <= 0:
         parent.remove_particle(particle)
         return
     # set color value
-    particle[4][0] = int(math.sin(soragl.SoraContext.ENGINE_UPTIME) * 127 + 127)
-    particle[4][1] = int(math.cos(soragl.SoraContext.ENGINE_UPTIME) * 127 + 127)
+    particle[4][0] = int(math.sin(SORA.ENGINE_UPTIME) * 127 + 127)
+    particle[4][1] = int(math.cos(SORA.ENGINE_UPTIME) * 127 + 127)
     particle[4][2] = int(math.sin(particle[0].x) * 127 + 127)
     # just spin + move in random direction
-    particle[0] += particle[1] * soragl.SoraContext.DELTA
-    particle[2] += particle[3] * soragl.SoraContext.DELTA
+    particle[0] += particle[1] * SORA.DELTA
+    particle[2] += particle[3] * SORA.DELTA
     # render -- square (that rotates)
     points = [i.rotate(particle[2]) + particle[0] for i in particle[6]]
-    pgdraw.polygon(soragl.SoraContext.FRAMEBUFFER, particle[4], points, 1)
+    pgdraw.polygon(SORA.FRAMEBUFFER, particle[4], points, 1)
 
 
 # register
@@ -543,21 +543,21 @@ def create_custom_particle(parent, **kwargs):
 def update_custom_particle(parent, particle):
     """Update a square particle"""
     # check if the particle is dead
-    particle[5] -= soragl.SoraContext.DELTA
+    particle[5] -= SORA.DELTA
     # print(particle)
     if particle[5] <= 0:
         parent.remove_particle(particle)
         return
     # set color value
     particle[4][0] = 255 - abs(int(math.sin(particle[0].y) * 100))
-    particle[4][1] = abs(int(math.cos(soragl.SoraContext.ENGINE_UPTIME) * 129))
+    particle[4][1] = abs(int(math.cos(SORA.ENGINE_UPTIME) * 129))
     particle[4][2] = 200 - abs(int(math.sin(particle[0].x) * 40))
     # just spin + move in random direction
-    particle[0] += particle[1] * soragl.SoraContext.DELTA
-    particle[2] += particle[3] * soragl.SoraContext.DELTA
+    particle[0] += particle[1] * SORA.DELTA
+    particle[2] += particle[3] * SORA.DELTA
     # render -- square (that rotates)
     points = [i.rotate(particle[2]) + particle[0] for i in particle[6]]
-    pgdraw.polygon(soragl.SoraContext.FRAMEBUFFER, particle[4], points, 1)
+    pgdraw.polygon(SORA.FRAMEBUFFER, particle[4], points, 1)
 
 
 # register
@@ -578,7 +578,7 @@ class OrthoCamera(mgl.Camera):
         super().__init__(pos, front, up, (0, 0, 0))
         # private
         self._view = self.calculate_view_matrix(self._position, self._front, self._up)
-        self._proj = self.calculate_ortho_matrix(0, soragl.SoraContext.SCREEN_WIDTH, soragl.SoraContext.SCREEN_HEIGHT, 0, -1, 1)
+        self._proj = self.calculate_ortho_matrix(0, SORA.SCREEN_WIDTH, SORA.SCREEN_HEIGHT, 0, -1, 1)
 
 
 

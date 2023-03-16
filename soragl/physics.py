@@ -1,6 +1,6 @@
 print("Activating physics.py")
 
-import soragl
+import soragl as SORA
 import random
 import math
 
@@ -290,20 +290,20 @@ def _default_create(parent, **kwargs):
 def _default_update(parent, particle):
     """Default update function for particles"""
     # gravity
-    particle[1] += World2D.GRAVITY * soragl.SoraContext.DELTA
-    particle[4] -= soragl.SoraContext.DELTA
+    particle[1] += World2D.GRAVITY * SORA.DELTA
+    particle[4] -= SORA.DELTA
     if particle[4] <= 0:
         parent.remove_particle(particle)
         return
     # move
     particle[0] += particle[1]
     # render
-    pgdraw.circle(soragl.SoraContext.FRAMEBUFFER, particle[3], particle[0], particle[2]) #, 1)
+    pgdraw.circle(SORA.FRAMEBUFFER, particle[3], particle[0], particle[2]) #, 1)
 
 # timer function
 def _default_timer(parent):
     """Default timer function for particles"""
-    parent._timer += soragl.SoraContext.DELTA
+    parent._timer += SORA.DELTA
     if parent._timer >= parent._data["interval"]:
         # print(parent._function_data)
         parent._timer = 0

@@ -71,9 +71,10 @@ class Entity:
         """Components property"""
         return self._components
     
-    def add_component(self, component):
+    def add_component(self, component) -> "Component":
         """Add a component to the entity"""
         self.world.add_component(self, component)
+        return component
     
     def remove_component(self, component):
         """Remove a component from the entity"""

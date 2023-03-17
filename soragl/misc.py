@@ -27,6 +27,18 @@ def fwrite(path, data: str):
         f.write(data)
 
 
+def recursive_retrieve_parent_classes(obj, level=0):
+    """Recursively retrieve all parent classes of an object"""
+    result = []
+    itt = obj.__class__.__bases__ if level == 0 else obj.__bases__
+    if itt:
+        for base in itt:
+            if base == object:
+                continue
+            result.append(base)
+            result += recursive_retrieve_parent_classes(base, level + 1)
+    return result
+
 # ------------------------------------------------------------ #
 # misc user input options
 """

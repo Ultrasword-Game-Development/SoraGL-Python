@@ -118,13 +118,20 @@ class Chunk:
 # scene - aspects
 
 class Aspect:
-    def __init__(self, target_component_class, priority:int=0):
+    def __init__(self, target_component_class: list, priority: int = 0):
         """Create a processor"""
         # defined after added to world
         self._world = None
         # variables
         self.priority = priority
-        self._target = hash(target_component_class)
+        self._targets = [
+            hash(x)
+            for x in (
+                target_component_class
+                if type(target_component_class) == list
+                else [target_component_class]
+            )
+        ]
     
     def on_add(self):
         """When added to the world"""

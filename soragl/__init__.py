@@ -25,6 +25,7 @@ def start_engine_time():
     START_TIME = ENGINE_START_TIME
     update_time()
 
+
 def update_time():
     """Updates time."""
     global START_TIME, END_TIME, DELTA, ENGINE_UPTIME
@@ -35,13 +36,16 @@ def update_time():
     # update all clocks
     update_global_clocks()
 
+
 def pause_time(t: float):
     """Pauses time for a certain amount of time."""
     time.sleep(t)
 
+
 def get_current_time():
     """Returns the current system time"""
     return START_TIME
+
 
 # ------------------------------------------------ #
 # global clock queue
@@ -56,9 +60,11 @@ def deactivate_timer(timer):
     """Deactivate a timer"""
     REMOVE_ARR.add(timer.hash)
 
+
 def activate_timer(timer):
     """Activate a timer"""
     ACTIVE_CLOCKS.add(timer.hash)
+
 
 def get_timer(limit: float = 0, loop: bool = False):
     """Get a timer object"""
@@ -66,6 +72,7 @@ def get_timer(limit: float = 0, loop: bool = False):
     ALL_CLOCKS[c.hash] = c
     activate_timer(c)
     return c
+
 
 def update_global_clocks():
     """Update all active clocks"""
@@ -75,9 +82,11 @@ def update_global_clocks():
         ACTIVE_CLOCKS.remove(c)
     REMOVE_ARR.clear()
 
+
 # ------------------------------------------------ #
 # timer class
 # ------------------------------------------------ #
+
 
 class Timer:
     def __init__(self, limit: float, loop: bool):
@@ -106,6 +115,7 @@ class Timer:
         self.passed = 0
         self.loopcount = 0
 
+
 # ------------------------------------------------ #
 # window variables
 # ------------------------------------------------ #
@@ -124,6 +134,7 @@ MODERNGL = False
 
 # setup engine
 
+
 def initialize(options: dict = {}) -> None:
     """Initialize Sora Engine with options."""
     global FPS, WSIZE, WFLAGS, WBITS, FFLAGS, FSIZE, FBITS, MODERNGL, DEBUG
@@ -140,9 +151,7 @@ def initialize(options: dict = {}) -> None:
         if "framebuffer_flags" in options
         else pygame.SRCALPHA
     )
-    FSIZE = (
-        options["framebuffer_size"] if "framebuffer_size" in options else WSIZE
-    )
+    FSIZE = options["framebuffer_size"] if "framebuffer_size" in options else WSIZE
     FBITS = options["framebuffer_bits"] if "framebuffer_bits" in options else 32
     DEBUG = options["debug"] if "debug" in options else False
     # add options as required!
@@ -150,10 +159,12 @@ def initialize(options: dict = {}) -> None:
     if MODERNGL:
         from . import mgl
 
+
 # check if certain flags are active
 def is_flag_active(flag: int):
     """Checks if a flag is active."""
     return bool(WFLAGS & flag)
+
 
 # ------------------------------------------------ #
 # window/camera data
@@ -170,11 +181,10 @@ def create_context():
     global WINDOW, FRAMEBUFFER, DEBUGBUFFER, CLOCK, RUNNING
     WINDOW = pygame.display.set_mode(WSIZE, WFLAGS, WBITS)
     FRAMEBUFFER = pygame.Surface(FSIZE, FFLAGS, FBITS)
-    DEBUGBUFFER = pygame.Surface(
-        FSIZE, FFLAGS | pygame.SRCALPHA, FBITS
-    )
+    DEBUGBUFFER = pygame.Surface(FSIZE, FFLAGS | pygame.SRCALPHA, FBITS)
     CLOCK = pygame.time.Clock()
     RUNNING = True
+
 
 def push_framebuffer():
     """Pushes framebuffer to window."""
@@ -190,16 +200,19 @@ def push_framebuffer():
         WINDOW.blit(pygame.transform.scale(DEBUGBUFFER, WSIZE), (0, 0))
         pygame.display.update()
 
+
 def refresh_buffers(color):
     """Refreshes framebuffer and debugbuffer"""
     FRAMEBUFFER.fill(color)
     DEBUGBUFFER.fill((0, 0, 0, 0))
+
 
 def update_window_resize(event):
     """Updates window size and framebuffer size."""
     global WSIZE, WPREVSIZE, FSIZE, FPREVSIZE
     WPREVSIZE[0], WPREVSIZE[1] = WSIZE[0], WSIZE[1]
     WSIZE[0], WSIZE[1] = event.x, event.y
+
 
 # TODO - changing fb res
 
@@ -220,6 +233,7 @@ def update_mouse_pos(event):
     MOUSE_MOVE[0], MOUSE_MOVE[1] = event.rel
     MOUSE_POS[0], MOUSE_POS[1] = event.pos
 
+
 def update_mouse_press(event):
     """Update mouse button press."""
     if event.button - 1 > 3:
@@ -227,14 +241,17 @@ def update_mouse_press(event):
     MOUSE_BUTTONS[event.button - 1] = True
     MOUSE_PRESSED.add(event.button - 1)
 
+
 def update_mouse_release(event):
     """Update mouse button release."""
     MOUSE_BUTTONS[event.button - 1] = False
+
 
 def update_mouse_scroll(event):
     """Update mouse scroll."""
     MOUSE_SCROLL[0], MOUSE_SCROLL[1] = event.rel
     MOUSE_SCROLL_POS[0], MOUSE_SCROLL_POS[1] = event.pos
+
 
 # ------------------------------------------------ #
 # hardware data -- input [keyboard]
@@ -247,18 +264,22 @@ KEYBOARD_PRESSED = set()
 for i in range(0, 3000):
     KEYBOARD_KEYS[i] = False
 
+
 def update_keyboard_down(event):
     """Update keyboard key press."""
     KEYBOARD_KEYS[event.key] = True
     KEYBOARD_PRESSED.add(event.key)
 
+
 def update_keyboard_up(event):
     """Update keyboard key release."""
     KEYBOARD_KEYS[event.key] = False
 
+
 # ------------------------------------------------ #
 # hardware data -- input [key + mouse]
 # ------------------------------------------------ #
+
 
 def update_hardware():
     """Updates the mouse"""
@@ -268,6 +289,7 @@ def update_hardware():
     MOUSE_SCROLL = [0, 0]
     KEYBOARD_PRESSED.clear()
 
+
 def get_mouse_rel():
     """Returns mouse position."""
     return (
@@ -275,17 +297,21 @@ def get_mouse_rel():
         MOUSE_POS[1] / WSIZE[1] * FSIZE[1],
     )
 
+
 def get_mouse_abs():
     """Returns mouse position."""
     return (MOUSE_POS[0], MOUSE_POS[1])
+
 
 def is_mouse_pressed(button):
     """Returns if mouse button is pressed."""
     return MOUSE_BUTTONS[button]
 
+
 def is_mouse_clicked(button):
     """Returns if mouse button is clicked."""
     return button in MOUSE_PRESSED
+
 
 def is_key_pressed(key):
     """Returns if key is pressed."""
@@ -293,9 +319,11 @@ def is_key_pressed(key):
         KEYBOARD_KEYS[key] = False
     return KEYBOARD_KEYS[key]
 
+
 def is_key_clicked(key):
     """Returns if key is clicked."""
     return key in KEYBOARD_PRESSED
+
 
 def handle_pygame_events():
     """Handles pygame events."""
@@ -325,6 +353,7 @@ def handle_pygame_events():
             # window resized
             update_window_resize(e)
 
+
 # ------------------------------------------------ #
 # filehandler
 # ------------------------------------------------ #
@@ -332,6 +361,7 @@ IMAGES = {}
 CHANNELS = {}
 AUDIO = {}
 FONTS = {}
+
 
 # textures
 def load_image(path):
@@ -341,22 +371,27 @@ def load_image(path):
     IMAGES[path] = pygame.image.load(path).convert_alpha()
     return IMAGES[path]
 
+
 def scale_image(image, size):
     """Scales image to size."""
     return pygame.transform.scale(image, size)
+
 
 def load_and_scale(image, size):
     """Loads and scales image to size."""
     return scale_image(load_image(image), size)
 
-def make_surface(width, height, flags=0, depth=32, masks=None):
+
+def make_surface(width, height, flags=0, depth=32):
     """Creates a new surface."""
-    return pygame.Surface((width, height), flags, depth, masks)
+    return pygame.Surface((width, height), flags, depth)
+
 
 # audio
 def make_channel(name):
     """Creates a new channel."""
     CHANNELS[name] = pygame.mixer.Channel(len(CHANNELS))
+
 
 def load_audio(path):
     """Loads audio from file."""
@@ -365,22 +400,27 @@ def load_audio(path):
     AUDIO[path] = pygame.mixer.Sound(path)
     return AUDIO[path]
 
+
 def play_audio(path, channel):
     """Plays audio on channel."""
     CHANNELS[channel].play(load_audio(path))
+
 
 def play_music(path):
     """Plays music."""
     pygame.mixer.music.load(path)
     pygame.mixer.music.play(-1)
 
+
 def stop_music():
     """Stops music."""
     pygame.mixer.music.stop()
 
+
 def set_volume(volume):
     """Sets volume."""
     pygame.mixer.music.set_volume(volume)
+
 
 # text / fonts
 def load_font(path, size):

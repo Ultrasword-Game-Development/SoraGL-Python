@@ -41,7 +41,7 @@ class MissingSprite(Exception):
 
 
 class Sprite(scene.Component):
-    def __init__(self, width: int = 0, height: int = 0, sprite=None):
+    def __init__(self, width: int = 0, height: int = 0, sprite=None, scale_size:tuple=None):
         super().__init__()
         self.width = width
         self.height = height
@@ -63,6 +63,8 @@ class Sprite(scene.Component):
         self.hwidth = self.width // 2
         self.hheight = self.height // 2
         # print(self.width, self.height, self._sprite)
+        # scaling size
+        self.scale_size = scale_size
 
     @property
     def sprite(self):
@@ -91,8 +93,8 @@ class Sprite(scene.Component):
 
 
 class AnimatedSprite(Sprite):
-    def __init__(self, width: int, height: int, registry):
-        super().__init__(width, height, registry.get_frame())
+    def __init__(self, width: int, height: int, registry, scale_size: tuple = None):
+        super().__init__(width, height, registry.get_frame(), scale_size=scale_size)
         self._registry = registry
 
     @property
@@ -131,7 +133,6 @@ class SpriteRenderer(scene.Component):
             self._sprite = self._entity.get_component(AnimatedSprite)
         # print(self._sprite)
 
-
 class SpriteRendererAspect(scene.Aspect):
     def __init__(self):
         super().__init__(SpriteRenderer)
@@ -147,6 +148,12 @@ class SpriteRendererAspect(scene.Aspect):
             # get the position
             pos = e.position.xy
             # render the sprite
+            if c_sprite.scale_size:
+                SORA.FRAMEBUFFER.blit(
+                    pgtrans.scale(c_sprite.sprite, c_sprite.scale_size),
+                    pos - (c_sprite.hwidth, c_sprite.hheight),
+                )
+                continue
             SORA.FRAMEBUFFER.blit(
                 c_sprite.sprite, pos - (c_sprite.hwidth, c_sprite.hheight)
             )

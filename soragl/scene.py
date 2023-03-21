@@ -143,11 +143,7 @@ class Aspect:
                 else [target_component_class]
             )
         ]
-<<<<<<< Updated upstream
-    
-=======
-
->>>>>>> Stashed changes
+        
     def on_add(self):
         """When added to the world"""
         pass

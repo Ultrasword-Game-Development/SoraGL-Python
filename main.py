@@ -102,8 +102,6 @@ while SORA.RUNNING:
     if SORA.is_key_clicked(pygame.K_d) and SORA.is_key_pressed(pygame.K_LSHIFT):
         SORA.DEBUG = not SORA.DEBUG
 
-    # SORA.FRAMEBUFFER.blit(SORA.DEBUGBUFFER, (0, 0))
-
     # push frame
     SORA.push_framebuffer()
     # pygame.display.flip()

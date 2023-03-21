@@ -575,9 +575,9 @@ def create_triangle_particle(parent, **kwargs):
         list(kwargs["color"]) if "color" in kwargs else [0, 0, 255],
         kwargs["life"] if "life" in kwargs else 1.0,
         (
-            physics.RIGHT * r,
-            physics.RIGHT.rotate(120) * r,
-            physics.RIGHT.rotate(240) * r,
+            physics.World2D.RIGHT * r,
+            physics.World2D.RIGHT.rotate(120) * r,
+            physics.World2D.RIGHT.rotate(240) * r,
         ),  # points
         parent.get_new_particle_id(),
     ]

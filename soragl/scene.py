@@ -255,6 +255,7 @@ class World:
             entity.rect.centery // self._options["chunkpixh"],
         )
         c._intrinstic_entities.add(hash(entity))
+        return entity
 
     def update_entity_chunk(self, entity, old, new):
         """Update the chunk intrinsic properties for entities"""

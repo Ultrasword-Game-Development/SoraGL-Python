@@ -51,11 +51,11 @@ class Entity:
         Entity.ENTITY_COUNT += 1
         self._entity_id = Entity.ENTITY_COUNT
         self._projected_position = pgmath.Vector2()
+        self._position = pgmath.Vector2()
+        self._velocity = pgmath.Vector2()
 
         # public
         self.c_chunk = [0, 0]
-        self.position = pgmath.Vector2()
-        self.velocity = pgmath.Vector2()
         self.rect = pRect(0, 0, 0, 0)
         self.static = False
 
@@ -117,6 +117,28 @@ class Entity:
             raise NotImplementedError(f"The area {new_area} is not supported yet! {__file__} {__package__}")
         self.rect.w, self.rect.h= new_area
     
+    @property
+    def position(self):
+        """Position property"""
+        return self._position
+    
+    @position.setter
+    def position(self, new_position):
+        """Set the position for the entity"""
+        self._position.x = new_position[0]
+        self._position.y = new_position[1]
+    
+    @property
+    def velocity(self):
+        """Velocity property"""
+        return self._velocity
+    
+    @velocity.setter
+    def velocity(self, new_velocity):
+        """Set the velocity for the entity"""
+        self._velocity.x = new_velocity[0]
+        self._velocity.y = new_velocity[1]
+
     #=== standard overloads
     def __eq__(self, o):
         """Overload the == operator"""

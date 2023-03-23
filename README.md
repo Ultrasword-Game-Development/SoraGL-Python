@@ -30,9 +30,9 @@ soragl is a game engine that uses the `pygame` and `moderngl` modules to streaml
 TLDR:
 
 1. clone git repository
-2. engine files are located in `engine`
+2. engine files are located in `soragl`
 3. everything else is customizable!
-4. to start using the `engine` package, just `import engine`
+4. to start using the `soragl` package, just `import soragl as SORA`
 
 --- 
 

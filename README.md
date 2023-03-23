@@ -4,7 +4,7 @@ SoraGL is a python based game-engine created to be simple and easy to learn and 
 
 ALTHOUGH: this project is mainly made to suite personal use cases but is open to third-party criticism or use!
 
-`Note:` most production/testing is performed on the #master branch | not the `#main` branch
+`Note:` most production/testing is performed on the `#master` branch | not the `#main` branch
 
 ## Readme Overview
 

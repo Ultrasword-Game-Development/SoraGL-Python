@@ -39,7 +39,8 @@ class World3D:
 class Entity:
     ENTITY_COUNT = 0
 
-    def __init__(self):
+    def __init__(self, name:str=None):
+        self.name = f"entity{Entity.ENTITY_COUNT}" if not name else name
         # defined after register
         self.world = None
         self.scene = None
@@ -239,6 +240,13 @@ class ParticleHandler(Entity):
         """Get a timer function"""
         return cls.TIMER_FUNC[name] if name in cls.TIMER_FUNC else cls.TIMER_FUNC[cls.DEFAULT_TIMER]
     
+    @classmethod
+    def register_particle_type(cls, name, create_func, update_func, timer_func):
+        """Register a particle type"""
+        cls.register_create_function(name, create_func)
+        cls.register_update_function(name, update_func)
+        cls.register_timer_function(name, timer_func)
+
     # ------------------------------ #
 
     def __init__(self, args: dict = {}, max_particles: int = 100, create_func: str = None, update_func: str = None, create_timer_func: str = None):

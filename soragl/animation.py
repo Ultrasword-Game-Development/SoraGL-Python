@@ -218,4 +218,8 @@ class Category:
         # return pframe
         return (meta, pframes)
 
+    @classmethod
+    def get_registries_for_all(cls, filename: str):
+        """Get a dictionary of registries for all sequences in a category"""
+        return {k: v.get_registry() for k, v in cls.get_category_framedata(filename).items()}
 

@@ -22,6 +22,7 @@ def handle_signals():
         s, args = EMIT_QUEUE.get()
         s._emit_signal(args)
 
+
 # ------------------------------------------------------------ #
 # signal receivers
 # ------------------------------------------------------------ #
@@ -57,7 +58,7 @@ class Receiver:
 class SignalRegister:
     """
     Signal
-    - name: str
+    - name: str (these should be unique for each signal)
     - receivers: dict
 
     an object that is instantiated to hold data about different types of signals
@@ -87,7 +88,7 @@ class SignalRegister:
         """Call all receiver functions"""
         for rec in self.receivers:
             self.receivers[rec].call(args)
-    
+
     def __repr__(self):
         """Represent the signal as a string"""
         return f"signal: {self.name} | id: {self.id}"

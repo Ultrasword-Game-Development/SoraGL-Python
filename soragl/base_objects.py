@@ -1,9 +1,10 @@
 import soragl as SORA
-from soragl import scene, physics, mgl, animation, smath
+from soragl import scene, physics, mgl, animation, smath, signal
 
 import random
 import math
 import glm
+import numpy as np
 
 from pygame import Rect as pgRect
 from pygame import math as pgmath
@@ -30,6 +31,7 @@ class MissingComponent(Exception):
 # base aspect objects
 # ------------------------------------------------------------ #
 
+
 # ------------------------------ #
 # sprite
 # NOTE: sprite / animated sprite must be added before renderer!
@@ -41,7 +43,9 @@ class MissingSprite(Exception):
 
 
 class Sprite(scene.Component):
-    def __init__(self, width: int = 0, height: int = 0, sprite=None, scale_size:tuple=None):
+    def __init__(
+        self, width: int = 0, height: int = 0, sprite=None, scale_size: tuple = None
+    ):
         super().__init__()
         self.width = width
         self.height = height
@@ -65,6 +69,19 @@ class Sprite(scene.Component):
         # print(self.width, self.height, self._sprite)
         # scaling size
         self.scale_size = scale_size
+
+        # flipping
+        self._flip = False
+    
+    @property
+    def flip(self):
+        """Get flip?"""
+        return self._flip
+
+    @flip.setter
+    def flip(self, value: bool):
+        """Set flip"""
+        self._flip = value
 
     @property
     def sprite(self):
@@ -93,6 +110,10 @@ class Sprite(scene.Component):
 
 
 class AnimatedSprite(Sprite):
+    """
+    AnimatedSprite
+    - must call register update EXTERNALLY
+    """
     def __init__(self, width: int, height: int, registry, scale_size: tuple = None):
         super().__init__(width, height, registry.get_frame(), scale_size=scale_size)
         self._registry = registry
@@ -133,6 +154,7 @@ class SpriteRenderer(scene.Component):
             self._sprite = self._entity.get_component(AnimatedSprite)
         # print(self._sprite)
 
+
 class SpriteRendererAspect(scene.Aspect):
     def __init__(self):
         super().__init__(SpriteRenderer)
@@ -142,21 +164,25 @@ class SpriteRendererAspect(scene.Aspect):
         """Render the sprites"""
         for e in self.iterate_entities():
             # get the sprite
+            # print(e._components)
             c_sprite = e.get_component(SpriteRenderer)._sprite
             if not c_sprite.sprite:
                 continue
-            # get the position
-            pos = e.position.xy
+            # get sprite
+            _sprite = c_sprite.sprite if not c_sprite.flip else pgtrans.flip(
+                c_sprite.sprite, True, False
+            )
             # render the sprite
             if c_sprite.scale_size:
                 SORA.FRAMEBUFFER.blit(
-                    pgtrans.scale(c_sprite.sprite, c_sprite.scale_size),
-                    pos - (c_sprite.hwidth, c_sprite.hheight),
+                    pgtrans.scale(_sprite, c_sprite.scale_size),
+                    e.position - (c_sprite.hwidth, c_sprite.hheight) - SORA.OFFSET,
                 )
                 continue
             SORA.FRAMEBUFFER.blit(
-                c_sprite.sprite, pos - (c_sprite.hwidth, c_sprite.hheight)
+                _sprite, e.position - (c_sprite.hwidth, c_sprite.hheight) - SORA.OFFSET
             )
+            # print(pos - (c_sprite.hwidth, c_sprite.hheight) - SORA.OFFSET)
 
 
 class SpriteRendererAspectDebug(scene.Aspect):
@@ -175,18 +201,92 @@ class SpriteRendererAspectDebug(scene.Aspect):
             # print(c_sprite)
             # render the sprite
             SORA.FRAMEBUFFER.blit(
-                c_sprite.sprite, e.position - (c_sprite.hwidth, c_sprite.hheight)
+                c_sprite.sprite, e.position - (c_sprite.hwidth, c_sprite.hheight) - SORA.OFFSET
             )
             pgdraw.rect(
                 SORA.DEBUGBUFFER,
                 (0, 0, 255),
                 pgRect(
-                    e.position - (c_sprite.hwidth, c_sprite.hheight),
+                    e.position - (c_sprite.hwidth, c_sprite.hheight) - SORA.iOFFSET,
                     c_sprite.sprite.get_size(),
                 ),
                 1,
             )
 
+
+# ------------------------------ #
+# area2d
+
+class Area2D(scene.Component):
+    def __init__(self, width: int, height: int):
+        super().__init__()
+        self.enter_signal_register = signal.SignalRegister("Area2D-enter")
+        self.overlap_signal_register = signal.SignalRegister("Area2D-overlap")
+        self.exit_signal_register = signal.SignalRegister("Area2D-exit")
+        # conditional for (if already has Collision2DComponent)
+        self._collision2D = False
+
+    def on_add(self):
+        """On add"""
+        # set position
+        self._entity.rect.center = self._entity.position
+
+    def detect_collision(self, other):
+        """Detect collision with another shape"""
+        pass
+
+
+class Area2DAspect(scene.Aspect):
+    def __init__(self):
+        super().__init__(Area2D)
+        # ensures runs after collsion2D aspect
+        # since we want to use updated positions of entities in world -- for area2D detection
+        self.priority = 18
+        self.a_collision2D = None
+        self.overlapped = set()
+
+    def on_add(self):
+        """On add"""
+        # grab aspect
+        self.a_collision2D = self._world.get_aspect(
+            Collision2DAspect, Collision2DRendererAspectDebug
+        )
+        if not self.a_collision2D:
+            raise NotImplementedError(
+                "Please add the Collision2DAspect before the Area2DAspect"
+            )
+
+    def handle(self):
+        """Handle area2Ds"""
+        for entity in self.iterate_entities():
+            if not entity.get_component(Area2D)._collision2D:
+                # move entity around
+                entity.position += entity.velocity
+                entity.rect.center = entity.position
+            # check for collision with each of the active collision2D components
+            for other in self.a_collision2D.iterate_entities():
+                # rect collision between entities
+                if other.static:
+                    continue
+                if other.rect.colliderect(entity.rect):
+                    # raise a signal?
+                    if id(other) in self.overlapped:
+                        entity.get_component(
+                            Area2D
+                        ).overlap_signal_register.emit_signal(other)
+                    else:
+                        entity.get_component(Area2D).enter_signal_register.emit_signal(
+                            other
+                        )
+                        self.overlapped.add(id(other))
+                    # print(f"signal: {SORA.ENGINE_UPTIME:.2f}", entity)
+                elif id(other) in self.overlapped:
+                    entity.get_component(Area2D).exit_signal_register.emit_signal(other)
+                    self.overlapped.remove(id(other))
+
+
+# TODO:
+# add in - circle + polygon
 
 # ------------------------------ #
 # collision2d
@@ -198,6 +298,7 @@ class Collision2DComponent(scene.Component):
         # private
         self._offset = pgmath.Vector2(offset) if offset else pgmath.Vector2(0, 0)
         self._rect = None
+        self.signal_register = signal.SignalRegister("Collision2D")
 
     def on_add(self):
         """On add"""
@@ -260,38 +361,37 @@ class Collision2DAspect(scene.Aspect):
         update chunk pos
         """
         # x movement
-        entity.position.x += entity.velocity.x * SORA.DELTA
-        entity.rect.center = entity.position.xy
+        entity._position.x += entity.velocity.x * SORA.DELTA
+        entity.rect.center = entity._position.xy
         # check for x collisions
         for col in self.iterate_collisions(entity.rect):
             # print(col.rect)
             if entity.velocity.x > 0:
-                entity.position.x -= entity.rect.right - col.rect.left
+                entity._position.x -= entity.rect.right - col.rect.left
             elif entity.velocity.x < 0:
-                entity.position.x += col.rect.right - entity.rect.left
+                entity._position.x += col.rect.right - entity.rect.left
             # update rect
-            entity.rect.center = entity.position.xy
+            entity.rect.center = entity._position.xy
         # y movement
-        entity.position.y += entity.velocity.y * SORA.DELTA
-        entity.rect.center = entity.position.xy
+        entity._position.y += entity.velocity.y * SORA.DELTA
+        entity.rect.center = entity._position.xy
         # check for y collisoins
         for col in self.iterate_collisions(entity.rect):
             if entity.velocity.y > 0:
-                entity.position.y -= entity.rect.bottom - col.rect.top
+                entity._position.y -= entity.rect.bottom - col.rect.top
             elif entity.velocity.y < 0:
-                entity.position.y += col.rect.bottom - entity.rect.top
+                entity._position.y += col.rect.bottom - entity.rect.top
             # update rect
-            entity.rect.center = entity.position.xy
+            entity.rect.center = entity._position.xy
         # update rect once more
-        entity.rect.center = entity.position.xy
+        entity.rect.center = entity._position.xy
 
         # update chunk position -- if moved to new chunk
         nchunk = [
-            int(entity.position.x) // self._world._options["chunkpixw"],
-            int(entity.position.y) // self._world._options["chunkpixh"],
+            int(entity._position.x) // self._world._options["chunkpixw"],
+            int(entity._position.y) // self._world._options["chunkpixh"],
         ]
         if nchunk != entity.c_chunk:
-            # print("new chunK!!!", nchunk, entity.c_chunk)
             self._world.update_entity_chunk(entity, entity.c_chunk, nchunk)
 
     def iterate_collisions(self, rect):
@@ -327,37 +427,37 @@ class Collision2DRendererAspectDebug(Collision2DAspect):
             self.handle_movement(entity)
             # render debug rect etc
             # print(entity.rect)
-            pgdraw.rect(SORA.DEBUGBUFFER, (255, 0, 0), entity.rect, 1)
+            pgdraw.rect(SORA.DEBUGBUFFER, (255, 0, 0), 
+                    pgRect(entity.rect.x - SORA.iOFFSET[0], entity.rect.y - SORA.iOFFSET[1], entity.rect.w, entity.rect.h),
+                    1)
 
 
 # ------------------------------ #
 # renderable
 
-
-class Renderable(scene.Component):
+class Script(scene.Component):
     def __init__(self):
         super().__init__()
 
     def on_add(self):
-        if not "renderable" in dir(self._entity):
+        if not "script" in dir(self._entity):
             raise NotImplementedError(
-                self._entity, "doesn't have `renderable` function"
+                self._entity, "doesn't have `script` function"
             )
 
 
-class RenderableAspect(scene.Aspect):
+class ScriptAspect(scene.Aspect):
     def __init__(self):
-        super().__init__(Renderable)
+        super().__init__(Script)
         self.priority = 2
 
     def handle(self):
         for e in self.iterate_entities():
-            e.renderable()
+            e.script()
 
 
 # ------------------------------ #
-# ---
-
+# 
 
 # ------------------------------------------------------------ #
 # world component aspects
@@ -485,7 +585,7 @@ class TileMap(scene.Aspect):
     def handle(self):
         """Handle the rendering of the tilemap"""
         for item in self.iterate_active_tiles():
-            SORA.FRAMEBUFFER.blit(self._resized_sprites[item.sprite_path][0], item.rect)
+            SORA.FRAMEBUFFER.blit(self._resized_sprites[item.sprite_path][0], (item.rect.x - SORA.OFFSET[0], item.rect.y - SORA.OFFSET[1]))
 
 
 class TileMapDebug(TileMap):
@@ -495,12 +595,12 @@ class TileMapDebug(TileMap):
     def handle(self):
         """Handle the rendering of the tilemap"""
         for item in self.iterate_active_tiles():
-            SORA.FRAMEBUFFER.blit(self._resized_sprites[item.sprite_path][0], item.rect)
+            SORA.FRAMEBUFFER.blit(self._resized_sprites[item.sprite_path][0], (item.rect.x - SORA.OFFSET[0], item.rect.y - SORA.OFFSET[1]))
             # debug render rect
             r = self._resized_sprites[item.sprite_path]
             # if r.w == 0 or r.h == 0: continue
             # print((r.x + item[0], r.y + item[0], r.w, r.h))
-            pgdraw.rect(SORA.DEBUGBUFFER, (0, 0, 255), item.rect, 1)
+            pgdraw.rect(SORA.DEBUGBUFFER, (0, 0, 255), pgRect(item.rect.x - SORA.iOFFSET[0], item.rect.y - SORA.iOFFSET[1], item.rect.w, item.rect.h), 1)
 
 
 # ------------------------------------------------------------ #
@@ -690,6 +790,56 @@ For use in opengl based applications / games! -- not pygame 2D
 # ------------------------------------------------------------ #
 
 
+# 2D camera
+class Camera2D(physics.Entity):
+    def __init__(self):
+        """
+        Camera Constructor:
+        contains:
+        - position
+        """
+        super().__init__()
+        self.campos = pgmath.Vector2(0, 0)
+        # ----------------------------------- #
+        # viewport size
+        self.viewport = pgRect(0, 0, SORA.FSIZE[0], SORA.FSIZE[1])
+
+        # target info + cache
+        self.target = None
+    
+    def on_ready(self):
+        """Called when the camera is ready"""
+        pass
+
+    def update(self):
+        """Track an entity target and center them"""
+        if not self.target: return
+        # get world position
+        self.position = self.target._position.xy
+        self.viewport.center = tuple(map(int, self.position.xy))
+        # update eglob offset
+        SORA.set_offset(self.position.x - SORA.FHSIZE[0], self.position.y - SORA.FHSIZE[1])
+        # update chunk position -- if moved to new chunk
+        nchunk = [
+            int(self._position.x) // self.world._options["chunkpixw"],
+            int(self._position.y) // self.world._options["chunkpixh"],
+        ]
+        # update world center
+        if nchunk != self.c_chunk:
+            self.world.update_entity_chunk(self, self.c_chunk, nchunk)
+            self.c_chunk[0:2] = nchunk
+            self.world.set_center_chunk(self.c_chunk[0], self.c_chunk[1])
+    
+    def set_target(self, target):
+        """Set a target"""
+        self.target = target
+
+    def get_target_rel_pos(self):
+        """Get the raget relative position"""
+        return -self.target.position + SORA.OFFSET
+
+
+# ortho
 class OrthoCamera(mgl.Camera):
     def __init__(self, pos, front, up):
         super().__init__(pos, front, up, (0, 0, 0))
@@ -700,6 +850,7 @@ class OrthoCamera(mgl.Camera):
         )
 
 
+# frustum
 class FrustCamera(mgl.Camera):
     def __init__(
         self,

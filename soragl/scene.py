@@ -2,8 +2,8 @@
 import json
 import pygame
 
-# ------------------------------------------------------------ #
 import soragl as SORA
+from soragl import smath
 
 if SORA.DEBUG:
     print("Activating scene.py")
@@ -13,7 +13,6 @@ from queue import deque
 
 # ------------------------------ #
 # scenehandler
-
 
 class SceneHandler:
     _STACK = deque()
@@ -41,62 +40,8 @@ class SceneHandler:
         """Update the current scene"""
         cls._STACK[-1].update()
 
-
-# ------------------------------ #
-# scene -- handlers
-
-
-class EntityHandler:
-    """
-    entity handlers:
-    - only store entities + entity types
-    - used to compare entity types + entities if required!
-    """
-
-    ENTITY_TYPES = {}
-
-    @classmethod
-    def register_type(cls, ename, etype):
-        """Register the entity type"""
-        cls.ENTITY_TYPES[ename] = etype
-
-    # ------------------------------ #
-
-    def __init__(self, scene):
-        self._entities = {}
-        self._scene = scene
-        self._new_entities = set()
-
-    def initialize_entities_at_end_of_update(self):
-        """Initialize the entities at the end of the update"""
-        for e in self._new_entities:
-            self._entities[e].on_ready()
-        self._new_entities.clear()
-
-    def register_entity(self, entity):
-        """Register the entity"""
-        entity.handler = self
-        entity.world = self._world
-        # store entity in ehandler
-        self._entities[hash(entity)] = entity
-        self._new_entities.add(hash(entity))
-
-    def get_entity(self, entity):
-        """Get the entity"""
-        return self._entities[hash(entity)]
-
-    def remove_entity(self, entity):
-        """Remove the entity"""
-        del self._entities[hash(entity)]
-
-    def clear(self):
-        """Clear the entity handler"""
-        self._entities.clear()
-
-
 # ------------------------------ #
 # scene - chunks
-
 
 class Chunk:
     def __init__(self, x: int, y: int, world, options: dict):
@@ -107,8 +52,26 @@ class Chunk:
         self._dev = {}
 
         # public
+        self.aq = []
+        self.rq = []
         cpw, cph = options["chunkpixw"], options["chunkpixh"]
-        self.rect = pygame.Rect(x * cpw, y * cph, (x + 1) * cpw, (y + 1) * cph)
+        self.rect = pygame.Rect(x * cpw, y * cph, cpw, cph)
+    
+    def _add_entity(self, entity: "Entity"):
+        """Add an entity to the chunk"""
+        self._intrinstic_entities.add(entity)
+    
+    def _remove_entity(self, entity: "Entity"):
+        """Remove an entity from the chunk"""
+        self._intrinstic_entities.remove(entity)
+    
+    def add_entity(self, entity: "Entity"):
+        """Add an entity to the chunk"""
+        self.aq.append(entity)
+    
+    def remove_entity(self, entity: "Entity"):
+        """Remove an entity from the chunk"""
+        self.rq.append(entity)
 
     def __hash__(self):
         """Hash the chunk"""
@@ -116,17 +79,23 @@ class Chunk:
 
     def update(self):
         """Update the chunk"""
+        # add + remove entiites
+        for entity in self.aq:
+            self._add_entity(entity)
+        # print(self._hash, self.rq, self._intrinstic_entities)
+        for entity in self.rq:
+            if entity not in self._intrinstic_entities:
+                # print(entity.c_chunk, self._hash)
+                continue
+            self._remove_entity(entity)
+        self.aq.clear()
+        self.rq.clear()
         # update all intrinstic entities
         for entity in self._intrinstic_entities:
             self._world._scene._global_entities[entity].update()
-        # # debug update
-        if SORA.DEBUG:
-            pygame.draw.rect(SORA.FRAMEBUFFER, (255, 0, 0), self.rect, 1)
-
 
 # ------------------------------ #
 # scene - aspects
-
 
 class Aspect:
     def __init__(self, target_component_class: list, priority: int = 0):
@@ -157,8 +126,7 @@ class Aspect:
         # print(self._world._components[self._target])
         for t in self._targets:
             for entity in self._world._components[t]:
-                yield self._world._scene.get_entity(hash(entity))
-
+                yield entity
 
 # ------------------------------ #
 # components
@@ -200,7 +168,6 @@ class Component:
 # ------------------------------ #
 # world class
 
-
 class World:
     """
     Acts as layers within a scene
@@ -220,12 +187,13 @@ class World:
         self._aspects = []
         self._components = {}  # comp_hash: {entities} (set)
         self._options = options
+        self._remove_c_ = []
         # rendering
         self._center_chunk = [0, 0]
         self._dev = {}
 
         # variables
-        self.render_distance = render_distance
+        self.render_distance = options["render_distance"]
         self.aspect_times = {}
 
         # add data to buffer
@@ -239,59 +207,66 @@ class World:
 
     # == entitiy
     def get_entity(self, entity):
-        """Get the entity"""
-        return self._ehandler.get_entity(entity)
+        """Get the entity -- from the GLOBAL entity handler"""
+        return self.scene.get_entity(entity)
+    
+    def remove_entity(self, entity):
+        """Remove an entity from the world"""
+        self._scene.remove_entity(entity)
 
     def add_entity(self, entity):
         """Add an entity to the world"""
         entity.world = self
         self._scene.add_entity(entity)
-        # register components in world
-        for comp in entity.components:
-            self.add_component(entity, comp)
-        # add to chunk
-        c = self.get_chunk(
-            entity.rect.centerx // self._options["chunkpixw"],
-            entity.rect.centery // self._options["chunkpixh"],
-        )
-        c._intrinstic_entities.add(hash(entity))
         return entity
 
     def update_entity_chunk(self, entity, old, new):
         """Update the chunk intrinsic properties for entities"""
         ochunk = self.get_chunk(old[0], old[1])
         nchunk = self.get_chunk(new[0], new[1])
-        ochunk._intrinstic_entities.remove(hash(entity))
-        nchunk._intrinstic_entities.add(hash(entity))
+        # print(entity, old, new)
+        # ochunk
+        # print('moved', entity, 'from', old, 'to', new)
+        ochunk.remove_entity(entity)
+        nchunk.add_entity(entity)
+        # update entity
         entity.c_chunk[0], entity.c_chunk[1] = new
+
+    def is_entity_active(self, entity):
+        """Check if the entity is active"""
+        for chunk in self._active_chunks:
+            if entity in self._chunks[chunk]._intrinstic_entities:
+                return True
+        return False
 
     def iter_active_entities(self):
         """Iterate through the active entities"""
         for chunk in self._active_chunks:
             for entity in self._chunks[chunk]._intrinstic_entities:
-                yield self._scene._global_entities[entity]
+                yield self._scene.get_entity(entity)
 
     # == comps
     def add_component(self, entity, component):
         """Add a component to an entity in the world"""
         comp_hash = hash(component)
+        comp_id = id(component)
         # print(component.__class__.__name__, comp_hash)
         if comp_hash not in self._components:
             self._components[comp_hash] = set()
         # find parent classes
-        print(__file__, "please find parent clases lmao")
-        self._components[comp_hash].add(hash(entity))
-        # add to entity
+        self._components[comp_hash].add(entity)
+        # add to entity -- using unique id
         entity._components[comp_hash] = component
         # component parent = entity
         component._entity = entity
         component.on_add()
 
-    def remove_component(self, entity, comp_class):
+    def remove_component(self, entity: "Entity", comp: "Component"):
         """Remove a component from an entity"""
-        if comp_class.get_hash() in self._components:
-            self._components[comp_class.get_hash()].remove(hash(entity))
-            entity.components.remove(comp_class.get_hash())
+        comp_hash = hash(comp)
+        comp_id = id(comp)
+        if comp_hash in self._components:
+            self._remove_c_.append((entity, comp))
 
     # == chunks
     def add_chunk(self, chunk):
@@ -345,11 +320,20 @@ class World:
         # cache the components
         # self._components[aspect._target] = set()
 
-    def get_aspect(self, aspect_class):
+    def get_aspect(self, *aspect_class):
         """Get an aspect"""
-        for i in self._aspects:
-            if isinstance(i, aspect_class):
-                return i
+        for _ in aspect_class:
+            for i in self._aspects:
+                if isinstance(i, _):
+                    return i
+        return None
+    
+    def get_aspects(self, *aspect_class):
+        """Get an aspect"""
+        for _ in aspect_class:
+            for i in self._aspects:
+                if isinstance(i, _):
+                    yield i
         return None
 
     def remove_aspect(self, aspect_type):
@@ -376,8 +360,28 @@ class World:
     def update(self):
         """Update the world"""
         # == update chunks
+        # print(self._active_chunks)
         for chunk in self._active_chunks:
             self._chunks[chunk].update()
+        # debug render if required
+        if SORA.DEBUG:
+            # for all x in range screen viewport
+            cc = self.get_chunk(self._center_chunk[0], self._center_chunk[1])
+            cr = cc.rect
+            # propagate outwards in all 4 directions -- if width of 3 chunks > width of framebuffer
+            lx = [ix for ix in range(cc.rect.w * -self.render_distance + cc.rect.left, cc.rect.w * self.render_distance + cc.rect.right, cc.rect.w)]
+            ly = [iy for iy in range(cc.rect.h * -self.render_distance + cc.rect.top, cc.rect.h * self.render_distance + cc.rect.bottom, cc.rect.h)]
+            for x in lx:
+                pygame.draw.line(SORA.DEBUGBUFFER, (255, 0, 0), (x - SORA.iOFFSET[0], 0), (x - SORA.iOFFSET[0], SORA.FSIZE[1]), 1)
+            for y in ly:
+                pygame.draw.line(SORA.DEBUGBUFFER, (255, 0, 0), (0, y - SORA.iOFFSET[1]), (SORA.FSIZE[0], y - SORA.iOFFSET[1]), 1)
+            # pygame.draw.rect(SORA.DEBUGBUFFER, (255, 0, 0), (cr.x - SORA.iOFFSET[0], cr.y - SORA.iOFFSET[1], cr.w, cr.h), 1)
+        # == update components
+        for i in self._remove_c_:
+            # print(i)
+            i[0].world._components[hash(i[1])].remove(i[0])
+            del i[0]._components[hash(i[1])]
+        self._remove_c_.clear()
         # == update aspects
         self.handle_aspects()
 
@@ -411,6 +415,7 @@ class Scene:
         # adding entities
         self._global_entities = {}
         self._new_entities = set()
+        self._remove_entities = set()
 
     def make_layer(self, config: dict, priority: int = 0, **kwargs):
         """Add a layer to the scene"""
@@ -423,13 +428,19 @@ class Scene:
     def add_entity(self, entity):
         """Add an entity to the scene"""
         entity.scene = self
-        self._global_entities[hash(entity)] = entity
+        # IMPORTANT: added but should not be updatable!!
+        self._global_entities[entity] = entity
         self._new_entities.add(entity)
 
     def remove_entity(self, entity):
         """Remove an entity from the scene"""
-        if hash(entity) in self._global_entities:
-            del self._global_entities[hash(entity)]
+        # remove from global entities
+        if entity in self._global_entities:
+            # remove entity + components from handlers
+            for comp in entity._components.values():
+                entity.world.remove_component(entity, comp.__class__)
+            # add to remove queue
+            self._remove_entities.add(entity)
 
     def get_entity(self, entity_hash: int):
         """Get an entity from the scene"""
@@ -447,15 +458,38 @@ class Scene:
 
     def update(self):
         """Update a scene"""
-        # update layers
-        for layer in self._layers:
-            layer.update()
         # add new entities
         buf = tuple(self._new_entities)
         # print(buf) if buf else None
         self._new_entities.clear()
         for pack in buf:
+            # add components + etc
+            # register components in world
+            w = pack.world
+            for comp in pack.components:
+                w.add_component(entity, comp)
+            # add to chunk
+            c = w.get_chunk(
+                pack.position.x // w._options["chunkpixw"],
+                pack.position.y // w._options["chunkpixh"],
+            ).add_entity(pack)
+            # on ready function call
             pack.on_ready()
+        # remove entities
+        for entity in tuple(self._remove_entities):
+            e = self.get_entity(entity)
+            self._remove_entity(e)
+        self._remove_entities.clear()
+        # update layers
+        for layer in self._layers:
+            layer.update()
+    
+    def _remove_entity(self, entity: "Entity"):
+        """Remove an entity from the scene"""
+        entity.world.get_chunk(entity.c_chunk[0], entity.c_chunk[1]).remove_entity(entity)
+        # remove linked entities
+        for link in entity._linked_entities:
+            link.kill()
 
 
 # ------------------------------ #
@@ -468,6 +502,7 @@ DEFAULT_CONFIG = {
     "chunktileh": 16,
     "tilepixw": 16,
     "tilepixh": 16,
+    "render_distance": 2
 }
 
 
